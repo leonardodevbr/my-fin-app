@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -20,8 +20,15 @@ const navItems = [
   { to: '/budgets', icon: PiggyBank, label: 'Orçamentos' },
 ]
 
+function isNavActive(pathname: string, to: string): boolean {
+  if (to === '/') return pathname === '/' || pathname === ''
+  return pathname === to || pathname.startsWith(to + '/')
+}
+
 export function Sidebar() {
   const { sidebarOpen, setSidebarOpen } = useAppStore()
+  const { pathname } = useLocation()
+  const currentPath = (pathname || '/').replace(/^#/, '') || '/'
 
   if (!sidebarOpen) return null
 
@@ -40,23 +47,25 @@ export function Sidebar() {
       </div>
       <nav className="flex-1 overflow-y-auto py-4 px-2">
         <ul className="space-y-1">
-          {navItems.map(({ to, icon: Icon, label }) => (
-            <li key={to}>
-              <NavLink
-                to={to}
-                end={to === '/'}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-lg text-surface-300 hover:bg-surface-800 hover:text-white transition-colors',
-                    isActive && 'bg-primary-600 text-white hover:bg-primary-600'
-                  )
-                }
-              >
-                <Icon className="h-5 w-5 shrink-0" />
-                <span>{label}</span>
-              </NavLink>
-            </li>
-          ))}
+          {navItems.map(({ to, icon: Icon, label }) => {
+            const active = isNavActive(currentPath, to)
+            return (
+              <li key={to}>
+                <NavLink
+                  to={to}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
+                    active
+                      ? 'bg-primary-600 text-white hover:bg-primary-600'
+                      : 'text-surface-300 hover:bg-surface-800 hover:text-white'
+                  )}
+                >
+                  <Icon className="h-5 w-5 shrink-0" />
+                  <span>{label}</span>
+                </NavLink>
+              </li>
+            )
+          })}
         </ul>
       </nav>
     </aside>
