@@ -7,6 +7,7 @@ import {
   Tags,
   BarChart3,
   PiggyBank,
+  User,
   LogOut,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
@@ -21,6 +22,7 @@ const navItems = [
   { to: '/categories', icon: Tags, label: 'Categorias' },
   { to: '/reports', icon: BarChart3, label: 'Relatórios' },
   { to: '/budgets', icon: PiggyBank, label: 'Orçamentos' },
+  { to: '/profile', icon: User, label: 'Perfil' },
 ]
 
 function isNavActive(pathname: string, to: string): boolean {

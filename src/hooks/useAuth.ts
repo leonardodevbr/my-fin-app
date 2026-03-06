@@ -12,6 +12,7 @@ export interface AuthState {
   signInWithOtp: (email: string) => Promise<{ error: Error | null }>
   resetPasswordForEmail: (email: string) => Promise<{ error: Error | null }>
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>
+  updateProfile: (updates: { full_name?: string; avatar_url?: string }) => Promise<{ error: Error | null }>
   clearNeedsNewPassword: () => void
   signOut: () => Promise<void>
 }
@@ -91,6 +92,16 @@ export function useAuth(): AuthState {
     return { error: error ?? null }
   }
 
+  const updateProfile = async (updates: {
+    full_name?: string
+    avatar_url?: string
+  }): Promise<{ error: Error | null }> => {
+    const supabase = getSupabase()
+    if (!supabase) return { error: new Error('Supabase não configurado') }
+    const { error } = await supabase.auth.updateUser({ data: updates })
+    return { error: error ?? null }
+  }
+
   const signOut = async (): Promise<void> => {
     const supabase = getSupabase()
     if (supabase) await supabase.auth.signOut()
@@ -105,6 +116,7 @@ export function useAuth(): AuthState {
     signInWithOtp,
     resetPasswordForEmail,
     updatePassword,
+    updateProfile,
     clearNeedsNewPassword: () => setNeedsNewPassword(false),
     signOut,
   }

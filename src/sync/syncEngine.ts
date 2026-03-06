@@ -22,6 +22,15 @@ function setLastSync(iso: string): void {
   }
 }
 
+/** Limpa o último sync para que o próximo pull traga tudo de novo (útil se categorias/contas não carregaram). */
+export function clearLastSync(): void {
+  try {
+    localStorage.removeItem(LAST_SYNC_KEY)
+  } catch {
+    // ignore
+  }
+}
+
 async function pushTable(
   tableName: string,
   items: SyncQueueItem[]
@@ -135,9 +144,9 @@ export async function pullChanges(since: string): Promise<void> {
 
 export async function syncAll(): Promise<void> {
   if (!isSupabaseConfigured) return
-  await pushChanges()
   const since = getLastSync()
   await pullChanges(since)
+  await pushChanges()
 }
 
 export function startAutoSync(onStatus?: (syncing: boolean, error?: string) => void): () => void {

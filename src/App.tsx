@@ -10,6 +10,7 @@ import { AccountsPage } from './features/accounts/AccountsPage'
 import { CategoriesPage } from './features/categories/CategoriesPage'
 import { ReportsPage } from './features/reports/ReportsPage'
 import { BudgetsPage } from './features/budgets/BudgetsPage'
+import { ProfilePage } from './features/profile/ProfilePage'
 import { useAuthRequired } from './hooks/useAuth'
 
 const REDIRECT_KEY = 'finapp_redirect_after_auth'
@@ -62,6 +63,7 @@ function App() {
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/budgets" element={<BudgetsPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Routes>
         </AppShell>
         </>

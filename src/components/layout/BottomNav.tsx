@@ -1,14 +1,13 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, ArrowLeftRight, Wallet, Tags, BarChart3, PiggyBank } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, Wallet, User } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
+// Só o essencial no footer; Categorias, Relatórios e Orçamentos ficam no menu lateral
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Início' },
   { to: '/transactions', icon: ArrowLeftRight, label: 'Transações' },
   { to: '/accounts', icon: Wallet, label: 'Contas' },
-  { to: '/categories', icon: Tags, label: 'Categorias' },
-  { to: '/reports', icon: BarChart3, label: 'Relatórios' },
-  { to: '/budgets', icon: PiggyBank, label: 'Orçamentos' },
+  { to: '/profile', icon: User, label: 'Perfil' },
 ]
 
 function isNavActive(pathname: string, to: string): boolean {
