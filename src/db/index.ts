@@ -30,4 +30,12 @@ export class FinAppDB extends Dexie {
 }
 
 export const db = new FinAppDB()
-export type { Account, Budget, Category, SyncQueueItem, Transaction } from './schema'
+export type {
+  Account,
+  Budget,
+  Category,
+  SyncQueueItem,
+  Transaction,
+  TransactionType,
+  RecurrenceType,
+} from './schema'

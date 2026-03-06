@@ -10,6 +10,14 @@ export function formatCurrency(value: number, currency = 'BRL'): string {
   }).format(value)
 }
 
+/** Parse "R$ 1.234,56" to 1234.56 */
+export function parseCurrency(value: string): number {
+  if (!value || typeof value !== 'string') return 0
+  const normalized = value.replace(/\s/g, '').replace(/\./g, '').replace(',', '.')
+  const num = parseFloat(normalized)
+  return Number.isNaN(num) ? 0 : num
+}
+
 export function formatDate(dateStr: string, pattern = 'dd/MM/yyyy'): string {
   if (!dateStr) return ''
   if (ISO_DATE.test(dateStr)) {

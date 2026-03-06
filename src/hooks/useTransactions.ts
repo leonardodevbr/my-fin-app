@@ -113,3 +113,49 @@ export async function deleteTransaction(id: string): Promise<void> {
     attempts: 0,
   })
 }
+
+export async function getTransactionsByInstallmentGroupId(
+  installment_group_id: string
+): Promise<Transaction[]> {
+  return db.transactions
+    .where('installment_group_id')
+    .equals(installment_group_id)
+    .toArray()
+}
+
+export async function deleteTransactionGroup(installment_group_id: string): Promise<void> {
+  const group = await getTransactionsByInstallmentGroupId(installment_group_id)
+  const now = new Date().toISOString()
+  for (const t of group) {
+    await db.transactions.delete(t.id)
+    await db.sync_queue.add({
+      id: generateId(),
+      table_name: 'transactions',
+      record_id: t.id,
+      operation: 'delete',
+      payload: JSON.stringify({ id: t.id }),
+      created_at: now,
+      attempts: 0,
+    })
+  }
+}
+
+export function useRecentDescriptions(limit = 20): string[] {
+  const list = useLiveQuery(
+    async () => {
+      const all = await db.transactions.orderBy('updated_at').reverse().toArray()
+      const seen = new Set<string>()
+      const out: string[] = []
+      for (const t of all) {
+        if (t.description && !seen.has(t.description)) {
+          seen.add(t.description)
+          out.push(t.description)
+          if (out.length >= limit) break
+        }
+      }
+      return out
+    },
+    [limit]
+  )
+  return list ?? []
+}
