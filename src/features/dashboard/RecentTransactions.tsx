@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { useTransactionsWithLoading } from '../../hooks/useTransactions'
 import { useAccounts } from '../../hooks/useAccounts'
 import { useCategories } from '../../hooks/useCategories'
-import { formatCurrency, formatDate, monthRange } from '../../lib/utils'
+import { formatCurrencyFromCents, formatDate, monthRange } from '../../lib/utils'
 import { useAppStore } from '../../store/appStore'
 import { Skeleton } from '../../components/ui/Skeleton'
 
@@ -97,7 +97,7 @@ export function RecentTransactions() {
                 </div>
                 <span className={`shrink-0 font-medium ${amountColor}`}>
                   {t.type === 'expense' ? '-' : '+'}
-                  {formatCurrency(t.amount)}
+                  {formatCurrencyFromCents(t.amount)}
                 </span>
               </li>
             )

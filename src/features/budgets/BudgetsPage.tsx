@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
-import { formatCurrency } from '../../lib/utils'
+import { formatCurrencyFromCents } from '../../lib/utils'
 
 export function BudgetsPage() {
   const budgets = useLiveQuery(() => db.budgets.orderBy('month').reverse().toArray(), [])
@@ -23,7 +23,7 @@ export function BudgetsPage() {
               {list.map((b) => (
                 <li key={b.id} className="py-3 first:pt-0 last:pb-0 flex items-center justify-between">
                   <span className="text-surface-700">Categoria {b.category_id} — {b.month}</span>
-                  <span className="font-semibold text-surface-900">{formatCurrency(b.amount)}</span>
+                  <span className="font-semibold text-surface-900">{formatCurrencyFromCents(b.amount)}</span>
                 </li>
               ))}
             </ul>

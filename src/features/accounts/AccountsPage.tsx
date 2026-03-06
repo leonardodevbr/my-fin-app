@@ -1,6 +1,6 @@
 import { useAccounts } from '../../hooks/useAccounts'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
-import { formatCurrency } from '../../lib/utils'
+import { formatCurrencyFromCents } from '../../lib/utils'
 
 export function AccountsPage() {
   const accounts = useAccounts(false)
@@ -31,7 +31,7 @@ export function AccountsPage() {
                       <p className="text-sm text-surface-500">{a.type}</p>
                     </div>
                   </div>
-                  <span className="font-semibold text-surface-900">{formatCurrency(a.balance, a.currency)}</span>
+                  <span className="font-semibold text-surface-900">{formatCurrencyFromCents(a.balance, a.currency)}</span>
                 </li>
               ))}
             </ul>

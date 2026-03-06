@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Check, Trash2 } from 'lucide-react'
 import type { Transaction } from '../../db'
-import { formatCurrency, formatDate } from '../../lib/utils'
+import { formatCurrencyFromCents, formatDate } from '../../lib/utils'
 import { cn } from '../../lib/utils'
 
 const SWIPE_THRESHOLD = 60
@@ -128,7 +128,7 @@ export function TransactionItem({
         </div>
         <p className={cn('shrink-0 font-semibold', amountColor)}>
           {transaction.type === 'expense' ? '-' : '+'}
-          {formatCurrency(transaction.amount)}
+          {formatCurrencyFromCents(transaction.amount)}
         </p>
       </div>
     </div>

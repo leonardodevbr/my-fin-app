@@ -12,6 +12,7 @@ export interface Account {
   id: string
   name: string
   type: AccountType
+  /** Saldo em centavos (inteiro). Ex: R$ 10,50 = 1050 */
   balance: number
   color: string
   icon: string
@@ -39,6 +40,7 @@ export interface Transaction {
   account_id: string
   category_id: string | null
   type: TransactionType
+  /** Valor em centavos (inteiro). Ex: R$ 5,25 = 525 */
   amount: number
   description: string
   date: string
@@ -58,6 +60,7 @@ export interface Transaction {
 export interface Budget {
   id: string
   category_id: string
+  /** Limite em centavos (inteiro). Ex: R$ 1.000,00 = 100000 */
   amount: number
   month: string
   created_at: string

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAccountsWithLoading } from '../../hooks/useAccounts'
 import { useTransactions } from '../../hooks/useTransactions'
-import { formatCurrency, monthRange } from '../../lib/utils'
+import { formatCurrencyFromCents, monthRange } from '../../lib/utils'
 import { useAppStore } from '../../store/appStore'
 import { Skeleton } from '../../components/ui/Skeleton'
 
@@ -98,14 +98,14 @@ export function BalanceHeader() {
         </button>
       </div>
       <p className="mt-1 text-2xl font-bold text-surface-900 md:text-3xl">
-        {masked ? '••••••' : formatCurrency(displayBalance)}
+        {masked ? '••••••' : formatCurrencyFromCents(displayBalance)}
       </p>
       <div className="mt-3 flex flex-wrap gap-4 text-sm">
         <span className="text-[var(--color-income)]">
-          Receitas: {masked ? '••••' : formatCurrency(displayIncome)}
+          Receitas: {masked ? '••••' : formatCurrencyFromCents(displayIncome)}
         </span>
         <span className="text-[var(--color-expense)]">
-          Despesas: {masked ? '••••' : formatCurrency(displayExpense)}
+          Despesas: {masked ? '••••' : formatCurrencyFromCents(displayExpense)}
         </span>
       </div>
     </div>

@@ -10,12 +10,22 @@ export function formatCurrency(value: number, currency = 'BRL'): string {
   }).format(value)
 }
 
-/** Parse "R$ 1.234,56" to 1234.56 */
+/** Valor no banco é inteiro em centavos. Exibe em reais: 525 → "R$ 5,25" */
+export function formatCurrencyFromCents(cents: number, currency = 'BRL'): string {
+  return formatCurrency(cents / 100, currency)
+}
+
+/** Parse "R$ 1.234,56" ou "1.234,56" para número em reais (1234.56). */
 export function parseCurrency(value: string): number {
   if (!value || typeof value !== 'string') return 0
   const normalized = value.replace(/\s/g, '').replace(/\./g, '').replace(',', '.')
   const num = parseFloat(normalized)
   return Number.isNaN(num) ? 0 : num
+}
+
+/** Converte string formatada (reais) para centavos (inteiro). Ex: "R$ 5,25" → 525 */
+export function parseCurrencyToCents(value: string): number {
+  return Math.round(parseCurrency(value) * 100)
 }
 
 export function formatDate(dateStr: string, pattern = 'dd/MM/yyyy'): string {

@@ -1,7 +1,7 @@
 import { useTransactions } from '../../hooks/useTransactions'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { formatCurrency } from '../../lib/utils'
+import { formatCurrencyFromCents } from '../../lib/utils'
 import { useMemo } from 'react'
 
 export function ReportsPage() {
@@ -34,8 +34,8 @@ export function ReportsPage() {
                 <BarChart data={byType} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => (v != null ? formatCurrency(Number(v)) : '')} />
+                  <YAxis tickFormatter={(v) => formatCurrencyFromCents(Number(v))} tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(v) => (v != null ? formatCurrencyFromCents(Number(v)) : '')} />
                   <Bar dataKey="value" name="Total" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

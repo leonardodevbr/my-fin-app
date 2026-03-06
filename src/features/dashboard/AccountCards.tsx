@@ -8,7 +8,7 @@ import {
   PiggyBank,
 } from 'lucide-react'
 import { useAccountsWithLoading } from '../../hooks/useAccounts'
-import { formatCurrency } from '../../lib/utils'
+import { formatCurrencyFromCents } from '../../lib/utils'
 import { Skeleton } from '../../components/ui/Skeleton'
 import type { Account } from '../../db'
 
@@ -57,7 +57,7 @@ export function AccountCards() {
               </p>
             </div>
             <p className="shrink-0 font-semibold text-surface-900">
-              {formatCurrency(account.balance, account.currency)}
+              {formatCurrencyFromCents(account.balance, account.currency)}
             </p>
           </button>
         )

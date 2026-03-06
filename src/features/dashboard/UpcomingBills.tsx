@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTransactionsWithLoading } from '../../hooks/useTransactions'
 import { useAccounts } from '../../hooks/useAccounts'
-import { formatCurrency, formatDate, toISODate } from '../../lib/utils'
+import { formatCurrencyFromCents, formatDate, toISODate } from '../../lib/utils'
 import { Skeleton } from '../../components/ui/Skeleton'
 
 function getDaysAhead(days: number): string {
@@ -83,7 +83,7 @@ export function UpcomingBills() {
                 </p>
               </div>
               <span className="font-semibold text-[var(--color-expense)]">
-                {formatCurrency(t.amount)}
+                {formatCurrencyFromCents(t.amount)}
               </span>
             </li>
           )

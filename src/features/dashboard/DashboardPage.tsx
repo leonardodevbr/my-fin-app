@@ -1,7 +1,7 @@
 import { useAccounts } from '../../hooks/useAccounts'
 import { useTransactions } from '../../hooks/useTransactions'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
-import { formatCurrency } from '../../lib/utils'
+import { formatCurrencyFromCents } from '../../lib/utils'
 
 export function DashboardPage() {
   const accounts = useAccounts(false)
@@ -19,7 +19,7 @@ export function DashboardPage() {
             <CardTitle>Saldo total</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold text-primary-600">{formatCurrency(totalBalance)}</p>
+            <p className="text-2xl font-semibold text-primary-600">{formatCurrencyFromCents(totalBalance)}</p>
           </CardContent>
         </Card>
         <Card>

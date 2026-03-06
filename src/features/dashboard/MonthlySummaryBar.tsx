@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useTransactionsWithLoading } from '../../hooks/useTransactions'
-import { formatCurrency, monthRange } from '../../lib/utils'
+import { formatCurrencyFromCents, monthRange } from '../../lib/utils'
 import { useAppStore } from '../../store/appStore'
 import { Skeleton } from '../../components/ui/Skeleton'
 
@@ -42,13 +42,13 @@ export function MonthlySummaryBar() {
         <div>
           <p className="text-xs font-medium uppercase text-surface-500">Receitas</p>
           <p className="text-lg font-bold text-[var(--color-income)]">
-            {formatCurrency(income)}
+            {formatCurrencyFromCents(income)}
           </p>
         </div>
         <div>
           <p className="text-xs font-medium uppercase text-surface-500">Despesas</p>
           <p className="text-lg font-bold text-[var(--color-expense)]">
-            {formatCurrency(expense)}
+            {formatCurrencyFromCents(expense)}
           </p>
         </div>
         <div>
@@ -58,7 +58,7 @@ export function MonthlySummaryBar() {
               balance >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
             }`}
           >
-            {formatCurrency(balance)}
+            {formatCurrencyFromCents(balance)}
           </p>
         </div>
       </div>

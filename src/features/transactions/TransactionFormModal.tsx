@@ -3,11 +3,14 @@ import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { X, Search } from 'lucide-react'
+import { X } from 'lucide-react'
 import type { Transaction } from '../../db'
 import { Button } from '../../components/ui/Button'
-import { Input } from '../../components/ui/Input'
-import { cn, formatCurrency, parseCurrency } from '../../lib/utils'
+import { CurrencyInput } from '../../components/ui/CurrencyInput'
+import { DatePicker } from '../../components/ui/DatePicker'
+import { Select } from '../../components/ui/Select'
+import { SearchableSelect } from '../../components/ui/SearchableSelect'
+import { cn, formatCurrencyFromCents } from '../../lib/utils'
 import { useAccounts } from '../../hooks/useAccounts'
 import { useCategories } from '../../hooks/useCategories'
 import { useRecentDescriptions } from '../../hooks/useTransactions'
@@ -19,7 +22,7 @@ import {
 
 const schema = z.object({
   type: z.enum(['income', 'expense', 'transfer']),
-  amount: z.string().min(1, 'Informe o valor').refine((v) => parseCurrency(v) > 0, 'Valor deve ser maior que zero'),
+  amount: z.number().min(1, 'Informe o valor'),
   description: z.string().min(2, 'Mínimo 2 caracteres'),
   date: z.string().min(1, 'Informe a data'),
   account_id: z.string().min(1, 'Selecione a conta'),
@@ -55,8 +58,6 @@ export function TransactionFormModal({
   const accounts = useAccounts(false)
   const categories = useCategories()
   const recentDescriptions = useRecentDescriptions(20)
-  const [accountSearch, setAccountSearch] = useState('')
-  const [categorySearch, setCategorySearch] = useState('')
   const [tagInput, setTagInput] = useState('')
 
   const { handleSubmit: submitForm } = useTransactionForm(() => {
@@ -81,7 +82,7 @@ export function TransactionFormModal({
   })
 
   const type = watch('type')
-  const amountStr = watch('amount')
+  const amountCents = watch('amount')
   const recurrence = watch('recurrence')
   const installments_total = watch('installments_total')
   const tags = watch('tags')
@@ -107,28 +108,21 @@ export function TransactionFormModal({
     setValue('category_id', '')
   }, [type, setValue])
 
-  const filteredAccounts = useMemo(
-    () =>
-      accountSearch.trim()
-        ? accounts.filter((a) =>
-            a.name.toLowerCase().includes(accountSearch.toLowerCase())
-          )
-        : accounts,
-    [accounts, accountSearch]
+  const accountOptions = useMemo(
+    () => accounts.map((a) => ({ value: a.id, label: a.name })),
+    [accounts]
   )
 
-  const filteredCategories = useMemo(
+  const categoryOptions = useMemo(
     () =>
       categories
         .filter((c) => c.type === type || type === 'transfer')
-        .filter((c) =>
-          !categorySearch.trim() || c.name.toLowerCase().includes(categorySearch.toLowerCase())
-        ),
-    [categories, type, categorySearch]
+        .map((c) => ({ value: c.id, label: c.name, color: c.color })),
+    [categories, type]
   )
 
-  const amountNum = parseCurrency(amountStr)
-  const installmentAmount = installments_total > 1 ? amountNum / installments_total : amountNum
+  const installmentAmountCents =
+    installments_total > 1 ? Math.floor(amountCents / installments_total) : amountCents
 
   const accentClass =
     type === 'income'
@@ -187,13 +181,11 @@ export function TransactionFormModal({
             ))}
           </div>
 
-          {/* Amount */}
-          <Input
+          {/* Amount: valor em centavos, exibido em reais em tempo real */}
+          <CurrencyInput
             label="Valor"
-            type="text"
-            inputMode="decimal"
-            placeholder="0,00"
-            {...register('amount')}
+            value={amountCents}
+            onChange={(cents) => setValue('amount', cents)}
             error={errors.amount?.message}
             className="text-2xl font-bold"
           />
@@ -217,61 +209,36 @@ export function TransactionFormModal({
           </div>
 
           {/* Date */}
-          <Input
+          <DatePicker
             label="Data"
-            type="date"
-            {...register('date')}
+            value={watch('date')}
+            onChange={(d) => setValue('date', d)}
             error={errors.date?.message}
           />
 
           {/* Account */}
-          <div>
-            <label className="block text-sm font-medium text-surface-700 mb-1">Conta</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-surface-400" />
-              <input
-                type="text"
-                placeholder="Buscar conta..."
-                value={accountSearch}
-                onChange={(e) => setAccountSearch(e.target.value)}
-                className="w-full rounded-lg border border-surface-300 bg-white pl-9 pr-3 py-2"
-              />
-            </div>
-            <select
-              className="mt-1 w-full rounded-lg border border-surface-300 bg-white px-3 py-2"
-              {...register('account_id')}
-            >
-              <option value="">Selecione</option>
-              {filteredAccounts.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-            {errors.account_id && (
-              <p className="mt-1 text-sm text-red-500">{errors.account_id.message}</p>
-            )}
-          </div>
+          <SearchableSelect
+            label="Conta"
+            value={watch('account_id')}
+            onChange={(v) => setValue('account_id', v)}
+            options={accountOptions}
+            placeholder="Selecione a conta"
+            searchPlaceholder="Buscar conta..."
+            emptyLabel="Nenhuma conta encontrada"
+            error={errors.account_id?.message}
+          />
 
           {/* Category */}
           {type !== 'transfer' && (
-            <div>
-              <label className="block text-sm font-medium text-surface-700 mb-1">Categoria</label>
-              <input
-                type="text"
-                placeholder="Buscar categoria..."
-                value={categorySearch}
-                onChange={(e) => setCategorySearch(e.target.value)}
-                className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2 mb-1"
-              />
-              <select
-                className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2"
-                {...register('category_id')}
-              >
-                <option value="">Nenhuma</option>
-                {filteredCategories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
+            <SearchableSelect
+              label="Categoria"
+              value={watch('category_id')}
+              onChange={(v) => setValue('category_id', v)}
+              options={[{ value: '', label: 'Nenhuma' }, ...categoryOptions]}
+              placeholder="Nenhuma"
+              searchPlaceholder="Buscar categoria..."
+              emptyLabel="Nenhuma categoria encontrada"
+            />
           )}
 
           {/* is_paid */}
@@ -298,17 +265,13 @@ export function TransactionFormModal({
           </div>
 
           {/* Recurrence */}
-          <div>
-            <label className="block text-sm font-medium text-surface-700 mb-1">Recorrência</label>
-            <select
-              className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2"
-              {...register('recurrence')}
-            >
-              {RECURRENCE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
+          <Select
+            label="Recorrência"
+            value={watch('recurrence')}
+            onChange={(v) => setValue('recurrence', v as import('../../db').RecurrenceType)}
+            options={RECURRENCE_OPTIONS}
+            placeholder="Não repete"
+          />
 
           {/* Installments */}
           {recurrence === 'none' && (
@@ -321,9 +284,9 @@ export function TransactionFormModal({
                 className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2"
                 {...register('installments_total', { valueAsNumber: true })}
               />
-              {installments_total > 1 && amountNum > 0 && (
+              {installments_total > 1 && amountCents > 0 && (
                 <p className="mt-1 text-sm text-surface-500">
-                  {installments_total} parcelas de {formatCurrency(installmentAmount)}
+                  {installments_total} parcelas de {formatCurrencyFromCents(installmentAmountCents)}
                 </p>
               )}
             </div>

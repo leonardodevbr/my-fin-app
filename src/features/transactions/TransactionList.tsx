@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import type { Transaction } from '../../db'
-import { formatCurrency, cn } from '../../lib/utils'
+import { formatCurrencyFromCents, cn } from '../../lib/utils'
 import { useAccounts } from '../../hooks/useAccounts'
 import { useCategories } from '../../hooks/useCategories'
 import { TransactionItem } from './TransactionItem'
@@ -99,7 +99,7 @@ export function TransactionList({
               )}
             >
               {dayTotal >= 0 ? '+' : ''}
-              {formatCurrency(dayTotal)}
+              {formatCurrencyFromCents(dayTotal)}
             </span>
           </div>
           <ul className="space-y-2">

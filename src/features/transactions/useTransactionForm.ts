@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 
 export interface TransactionFormValues {
   type: 'income' | 'expense' | 'transfer'
-  amount: string
+  amount: number
   description: string
   date: string
   account_id: string
@@ -22,7 +22,7 @@ export interface TransactionFormValues {
 
 const defaultValues: TransactionFormValues = {
   type: 'expense',
-  amount: '',
+  amount: 0,
   description: '',
   date: toISODate(new Date()),
   account_id: '',
@@ -38,7 +38,7 @@ export function getDefaultValues(transaction?: Transaction | null): TransactionF
   if (!transaction) return { ...defaultValues }
   return {
     type: transaction.type,
-    amount: String(transaction.amount),
+    amount: transaction.amount,
     description: transaction.description,
     date: transaction.date,
     account_id: transaction.account_id,
@@ -56,7 +56,7 @@ export async function saveTransaction(
   existingId?: string
 ): Promise<void> {
   const now = new Date().toISOString()
-  const amount = parseFloat(values.amount) || 0
+  const amountCents = Math.round(values.amount) || 0
   const installments = Math.max(1, Math.min(99, Math.round(values.installments_total) || 1))
 
   if (existingId) {
@@ -65,7 +65,7 @@ export async function saveTransaction(
     const updated: Transaction = {
       ...existing,
       type: values.type,
-      amount,
+      amount: amountCents,
       description: values.description.trim(),
       date: values.date,
       account_id: values.account_id,
@@ -93,17 +93,19 @@ export async function saveTransaction(
   }
 
   const groupId = generateId()
-  const perAmount = amount / installments
+  const baseCents = Math.floor(amountCents / installments)
+  const remainder = amountCents % installments
   const records: Transaction[] = []
 
   for (let i = 0; i < installments; i++) {
     const date = addMonths(new Date(values.date + 'T12:00:00'), i)
+    const parcelCents = baseCents + (i < remainder ? 1 : 0)
     records.push({
       id: generateId(),
       account_id: values.account_id,
       category_id: values.category_id || null,
       type: values.type,
-      amount: Math.round(perAmount * 100) / 100,
+      amount: parcelCents,
       description: installments > 1 ? `${values.description.trim()} (${i + 1}/${installments})` : values.description.trim(),
       date: toISODate(date),
       notes: values.notes.trim() || null,

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useBudgetsWithLoading } from '../../hooks/useBudgets'
 import { useTransactions } from '../../hooks/useTransactions'
 import { useCategories } from '../../hooks/useCategories'
-import { formatCurrency, monthRange } from '../../lib/utils'
+import { formatCurrencyFromCents, monthRange } from '../../lib/utils'
 import { useAppStore } from '../../store/appStore'
 import { Skeleton } from '../../components/ui/Skeleton'
 
@@ -70,7 +70,7 @@ export function BudgetProgress() {
             <div className="flex justify-between text-sm">
               <span className="font-medium text-surface-700">{item.categoryName}</span>
               <span className="text-surface-600">
-                {formatCurrency(item.spent)} / {formatCurrency(item.limit)}
+                {formatCurrencyFromCents(item.spent)} / {formatCurrencyFromCents(item.limit)}
               </span>
             </div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-200">
