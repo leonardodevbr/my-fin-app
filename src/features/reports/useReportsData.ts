@@ -11,7 +11,7 @@ import {
 import {
   startOfMonth,
   endOfMonth,
-  subMonths,
+  addMonths,
   format,
   parseISO,
   getDate,
@@ -35,6 +35,67 @@ export function useReportsDataMonth(monthKey: string) {
   const transactions = raw ?? []
   const data = useMemo(() => aggregateByMonth(transactions), [transactions])
   return { transactions, ...data, from, to }
+}
+
+/** By category for one month and one type (income/expense). For "Por Categoria" tab. */
+export function useReportsDataByCategory(monthKey: string, type: 'income' | 'expense') {
+  const [from, to] = monthRange(monthKey)
+  const raw = useLiveQuery(
+    async () =>
+      db.transactions
+        .where('date')
+        .between(from, to, true, true)
+        .toArray(),
+    [from, to]
+  )
+  const transactions = raw ?? []
+  const prevMonthKey = addMonthToKey(monthKey, -1)
+  const [prevFrom, prevTo] = monthRange(prevMonthKey)
+  const prevRaw = useLiveQuery(
+    async () =>
+      db.transactions
+        .where('date')
+        .between(prevFrom, prevTo, true, true)
+        .toArray(),
+    [prevFrom, prevTo]
+  )
+  const prevTransactions = prevRaw ?? []
+  const data = useMemo(
+    () => aggregateByCategoryForType(transactions, prevTransactions, type),
+    [transactions, prevTransactions, type]
+  )
+  return { transactions: transactions.filter((t) => t.type === type), ...data, from, to }
+}
+
+function aggregateByCategoryForType(
+  txs: Transaction[],
+  prevTxs: Transaction[],
+  type: 'income' | 'expense'
+) {
+  const filtered = txs.filter((t) => t.type === type)
+  const prevFiltered = prevTxs.filter((t) => t.type === type)
+  const total = filtered.reduce((s, t) => s + t.amount, 0)
+  const prevTotal = prevFiltered.reduce((s, t) => s + t.amount, 0)
+  const byCat: Record<string, number> = {}
+  const prevByCat: Record<string, number> = {}
+  for (const t of filtered) byCat[t.category_id ?? ''] = (byCat[t.category_id ?? ''] ?? 0) + t.amount
+  for (const t of prevFiltered) prevByCat[t.category_id ?? ''] = (prevByCat[t.category_id ?? ''] ?? 0) + t.amount
+  const allIds = new Set([...Object.keys(byCat), ...Object.keys(prevByCat)])
+  const byCategory = Array.from(allIds).map((categoryId) => {
+    const amount = byCat[categoryId] ?? 0
+    const prevAmount = prevByCat[categoryId] ?? 0
+    const delta = amount - prevAmount
+    const pct = total > 0 ? (amount / total) * 100 : 0
+    return {
+      categoryId: categoryId || null,
+      amount,
+      prevAmount,
+      delta,
+      pct,
+    }
+  })
+  byCategory.sort((a, b) => b.amount - a.amount)
+  return { byCategory, total, prevTotal }
 }
 
 /** Multi-month: pass number of months (3, 6, 12). Returns transactions and per-month aggregates. */
@@ -75,18 +136,18 @@ export function useReportsDataTrends(monthKey?: string) {
   )
   const transactions = raw ?? []
   const data = useMemo(
-    () => aggregateTrendsByCategory(transactions),
-    [transactions]
+    () => aggregateTrendsByCategory(transactions, from, to),
+    [transactions, from, to]
   )
   return { transactions, ...data, from, to }
 }
 
-function aggregateByMonth(txs: Transaction()) {
+function aggregateByMonth(txs: Transaction[]) {
   const income = txs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
   const expense = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
   const balance = income - expense
   const byWeek = weekBuckets(txs)
-  const topExpenseCategories = topExpenseCategoriesByCategory(txs, 5)
+  const topExpenseCategories = topExpenseByCategory(txs, 5)
   const maxExpense = txs
     .filter((t) => t.type === 'expense')
     .reduce((max, t) => (t.amount > max ? t.amount : max), 0)
@@ -102,7 +163,7 @@ function aggregateByMonth(txs: Transaction()) {
   }
 }
 
-function weekBuckets(txs: Transaction()): { week: string; income: number; expense: number }[] {
+function weekBuckets(txs: Transaction[]): { week: string; income: number; expense: number }[] {
   const buckets: Record<string, { income: number; expense: number }> = {}
   for (let w = 1; w <= 4; w++) {
     buckets[`Semana ${w}`] = { income: 0, expense: 0 }
@@ -122,26 +183,27 @@ function weekBuckets(txs: Transaction()): { week: string; income: number; expens
   }))
 }
 
-function topExpenseCategoriesByCategory(
-  txs: Transaction(),
+function topExpenseByCategory(
+  txs: Transaction[],
   limit: number
-): { categoryId: string | null; categoryName: string; amount: number }[] {
+): { categoryId: string | null; amount: number }[] {
   const byCat: Record<string, number> = {}
-  const names: Record<string, string> = { '': 'Sem categoria' }
   for (const t of txs) {
     if (t.type !== 'expense') continue
     const id = t.category_id ?? ''
     byCat[id] = (byCat[id] ?? 0) + t.amount
   }
-  const sorted = Object.entries(byCat)
-    .map(([id, amount]) => ({ categoryId: id || null, categoryName: names[id] ?? id || 'Sem categoria', amount }))
+  return Object.entries(byCat)
+    .map(([categoryId, amount]) => ({
+      categoryId: categoryId || null,
+      amount,
+    }))
     .sort((a, b) => b.amount - a.amount)
     .slice(0, limit)
-  return sorted
 }
 
 function aggregateByMonthRange(
-  txs: Transaction(),
+  txs: Transaction[],
   from: string,
   to: string
 ) {
@@ -150,22 +212,21 @@ function aggregateByMonthRange(
     { income: number; expense: number; balance: number; running: number }
   > = {}
   let running = 0
-  const start = parseISO(from)
-  const end = parseISO(to)
-  for (let d = startOfMonth(start); d <= end; d = startOfMonth(addMonthToKey(toMonthKey(d), 1))) {
-    const key = toMonthKey(d)
-    const monthEnd = endOfMonth(d)
-    const monthStart = startOfMonth(d)
+  let current = startOfMonth(parseISO(from))
+  const end = endOfMonth(parseISO(to))
+  while (current <= end) {
+    const key = toMonthKey(current)
+    const monthEnd = endOfMonth(current)
+    const monthStart = startOfMonth(current)
     const f = format(monthStart, 'yyyy-MM-dd')
     const t = format(monthEnd, 'yyyy-MM-dd')
-    const inMonth = txs.filter(
-      (x) => x.date >= f && x.date <= t
-    )
+    const inMonth = txs.filter((x) => x.date >= f && x.date <= t)
     const income = inMonth.filter((x) => x.type === 'income').reduce((s, x) => s + x.amount, 0)
     const expense = inMonth.filter((x) => x.type === 'expense').reduce((s, x) => s + x.amount, 0)
     const balance = income - expense
     running += balance
     byMonthKey[key] = { income, expense, balance, running }
+    current = addMonths(current, 1)
   }
   const months = Object.entries(byMonthKey)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -174,44 +235,42 @@ function aggregateByMonthRange(
       monthLabel: format(parseISO(month + '-01'), 'MMM yyyy', { locale: ptBR }),
       ...v,
     }))
-  return { byMonth: months, totalIncome: months.reduce((s, m) => s + m.income, 0), totalExpense: months.reduce((s, m) => s + m.expense, 0) }
+  return {
+    byMonth: months,
+    totalIncome: months.reduce((s, m) => s + m.income, 0),
+    totalExpense: months.reduce((s, m) => s + m.expense, 0),
+  }
 }
 
-function addMonthToKey(key: string, delta: number): string {
-  const [y, m] = key.split('-').map(Number)
-  const d = new Date(y, m - 1, 1)
-  d.setMonth(d.getMonth() + delta)
-  return format(d, 'yyyy-MM')
-}
-
-function aggregateTrendsByCategory(txs: Transaction()) {
-  type Point = { month: string; amount: number }
+function aggregateTrendsByCategory(
+  txs: Transaction[],
+  from: string,
+  to: string
+) {
   const byCategory: Record<string, Record<string, number>> = {}
-  const categoryNames: Record<string, string> = {}
   const expenseTxs = txs.filter((t) => t.type === 'expense')
   for (const t of expenseTxs) {
     const cid = t.category_id ?? '_none'
     if (!byCategory[cid]) byCategory[cid] = {}
     const month = t.date.slice(0, 7)
     byCategory[cid][month] = (byCategory[cid][month] ?? 0) + t.amount
-    if (!categoryNames[cid]) categoryNames[cid] = (t as Transaction & { categoryName?: string }).categoryName ?? cid === '_none' ? 'Sem categoria' : cid
   }
-  const months = useMemo(() => {
-    const set = new Set<string>()
-    expenseTxs.forEach((t) => set.add(t.date.slice(0, 7)))
-    return Array.from(set).sort()
-  }, [expenseTxs])
+  const monthList: string[] = []
+  let cur = startOfMonth(parseISO(from))
+  const end = endOfMonth(parseISO(to))
+  while (cur <= end) {
+    monthList.push(toMonthKey(cur))
+    cur = addMonths(cur, 1)
+  }
   const series = Object.entries(byCategory).map(([cid, byMonth]) => ({
     categoryId: cid === '_none' ? null : cid,
-    name: categoryNames[cid] ?? cid,
-    color: EXPENSE,
-    points: months.map((month) => ({
+    points: monthList.map((month) => ({
       month,
       amount: byMonth[month] ?? 0,
     })),
     projected: null as number | null,
   }))
-  return { series, months, categoryNames }
+  return { series, months: monthList }
 }
 
 export { INCOME, EXPENSE }
