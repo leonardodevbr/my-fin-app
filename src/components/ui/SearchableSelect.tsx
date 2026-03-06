@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Listbox } from '@headlessui/react'
-import { ChevronDown, Check, Search } from 'lucide-react'
+import { ChevronDown, Check } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
 export interface SearchableSelectOption<T = string> {
@@ -50,14 +50,12 @@ export function SearchableSelect<T extends string>({
       )}
       <Listbox value={value} onChange={onChange} disabled={disabled}>
         <div className="relative">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400 pointer-events-none" />
-            <Listbox.Button
-              className={cn(
-                'relative w-full cursor-default rounded-lg border bg-white py-2 pl-9 pr-10 text-left text-surface-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50',
-                error ? 'border-red-500' : 'border-surface-300'
-              )}
-            >
+          <Listbox.Button
+            className={cn(
+              'relative w-full cursor-default rounded-lg border bg-white py-2 pl-3 pr-10 text-left text-surface-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50',
+              error ? 'border-red-500' : 'border-surface-300'
+            )}
+          >
               {selected ? (
                 <span className="flex items-center gap-2 truncate">
                   {selected.color && (
@@ -75,9 +73,8 @@ export function SearchableSelect<T extends string>({
                 <ChevronDown className="h-4 w-4 text-surface-400" aria-hidden />
               </span>
             </Listbox.Button>
-          </div>
-          <Listbox.Options className="absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-surface-200 bg-white shadow-lg focus:outline-none">
-            <div className="sticky top-0 bg-white p-2 border-b border-surface-100">
+          <Listbox.Options className="absolute left-0 right-0 top-full z-[100] mt-1 max-h-56 overflow-auto rounded-xl border border-surface-200 bg-white shadow-lg focus:outline-none">
+            <div className="sticky top-0 z-10 border-b border-surface-100 bg-white p-2">
               <input
                 type="text"
                 value={query}

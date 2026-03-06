@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { User, Mail, Pencil, Check, X, RefreshCw, Lock, Eye, EyeOff, Camera } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { User, Mail, Pencil, Check, X, RefreshCw, Lock, Eye, EyeOff, Camera, ImagePlus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../hooks/useAuth'
 import { useSyncStatus } from '../../sync/useSyncStatus'
@@ -20,6 +20,7 @@ async function uploadAvatar(userId: string, file: File): Promise<string> {
   const { error } = await supabase.storage.from(AVATAR_BUCKET).upload(path, file, {
     cacheControl: '3600',
     upsert: true,
+    contentType: file.type || (ext === 'jpg' ? 'image/jpeg' : `image/${ext}`),
   })
   if (error) throw error
   const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path)
@@ -59,7 +60,43 @@ export function ProfilePage() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showNewPasswordConfirm, setShowNewPasswordConfirm] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [previewFile, setPreviewFile] = useState<File | null>(null)
+  const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null)
+  const [showCameraView, setShowCameraView] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+
+  useEffect(() => {
+    if (!showCameraView) return
+    let stream: MediaStream | null = null
+    const video = videoRef.current
+    const start = async () => {
+      try {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 640 } },
+          })
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 640 } } })
+        }
+        streamRef.current = stream
+        if (video) {
+          video.srcObject = stream
+          await video.play()
+        }
+      } catch (err) {
+        toast.error('Não foi possível acessar a câmera. Use a galeria.')
+        setShowCameraView(false)
+      }
+    }
+    start()
+    return () => {
+      stream?.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+      if (video) video.srcObject = null
+    }
+  }, [showCameraView])
 
   if (!user) {
     return (
@@ -95,10 +132,10 @@ export function ProfilePage() {
     setEditing(false)
   }
 
-  const handleAvatarFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
     e.target.value = ''
+    if (!file) return
     if (!ALLOWED_TYPES.includes(file.type)) {
       toast.error('Use uma imagem (JPG, PNG, WebP ou GIF).')
       return
@@ -107,16 +144,58 @@ export function ProfilePage() {
       toast.error(`A imagem deve ter no máximo ${MAX_SIZE_MB} MB.`)
       return
     }
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl)
+    setPreviewFile(file)
+    setPreviewObjectUrl(URL.createObjectURL(file))
+  }
+
+  const handleCancelPreview = () => {
+    if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl)
+    setPreviewFile(null)
+    setPreviewObjectUrl(null)
+  }
+
+  const handleCapturePhoto = () => {
+    const video = videoRef.current
+    if (!video || !video.videoWidth) return
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(video, 0, 0)
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return
+        const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' })
+        streamRef.current?.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
+        if (videoRef.current) videoRef.current.srcObject = null
+        setShowCameraView(false)
+        if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl)
+        setPreviewFile(file)
+        setPreviewObjectUrl(URL.createObjectURL(blob))
+      },
+      'image/jpeg',
+      0.9
+    )
+  }
+
+  const handleConfirmUpload = async () => {
+    if (!previewFile) return
     setUploadingAvatar(true)
     try {
-      const url = await uploadAvatar(user.id, file)
-      setAvatarUrl(url)
+      const url = await uploadAvatar(user.id, previewFile)
+      const urlWithCache = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now()
+      setAvatarUrl(urlWithCache)
       const { error } = await updateProfile({ avatar_url: url })
       if (error) throw error
       toast.success('Foto atualizada.')
       if (!editing) setEditing(true)
+      handleCancelPreview()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erro ao enviar foto.')
+      const msg = err instanceof Error ? err.message : 'Erro ao enviar foto.'
+      toast.error(msg.includes('Bucket') ? `${msg} Crie o bucket "avatars" no Supabase (Storage) e rode a migration 003.` : msg)
     } finally {
       setUploadingAvatar(false)
     }
@@ -189,8 +268,17 @@ export function ProfilePage() {
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-6">
           <div className="flex flex-col items-center w-full sm:w-auto sm:items-start gap-3">
-            <div className="h-24 w-24 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-2xl font-semibold border-2 border-surface-200 overflow-hidden shrink-0">
-              {(editing ? avatarUrl.trim() : avatar) ? (
+            <div className="h-40 w-40 sm:h-48 sm:w-48 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-3xl sm:text-4xl font-semibold border-2 border-surface-200 overflow-hidden shrink-0 relative">
+              {showCameraView ? (
+                <video
+                  ref={videoRef}
+                  playsInline
+                  muted
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              ) : previewObjectUrl ? (
+                <img src={previewObjectUrl} alt="Preview" className="h-full w-full object-cover" />
+              ) : (editing ? avatarUrl.trim() : avatar) ? (
                 <img
                   src={(editing ? avatarUrl.trim() : avatar) ?? ''}
                   alt=""
@@ -203,14 +291,16 @@ export function ProfilePage() {
                   }}
                 />
               ) : null}
-              <span
-                className="h-full w-full flex items-center justify-center"
-                style={{
-                  display: (editing ? avatarUrl.trim() : avatar) ? 'none' : 'flex',
-                }}
-              >
-                {initials}
-              </span>
+              {!previewObjectUrl && !showCameraView && (
+                <span
+                  className="h-full w-full flex items-center justify-center"
+                  style={{
+                    display: (editing ? avatarUrl.trim() : avatar) ? 'none' : 'flex',
+                  }}
+                >
+                  {initials}
+                </span>
+              )}
             </div>
             {isSupabaseConfigured && (
               <div className="w-full space-y-2">
@@ -219,19 +309,71 @@ export function ProfilePage() {
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif"
                   className="hidden"
-                  onChange={handleAvatarFile}
+                  onChange={handleAvatarFileSelect}
                 />
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingAvatar}
-                    className="flex items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 disabled:opacity-50"
-                  >
-                    <Camera className="h-4 w-4" />
-                    {uploadingAvatar ? 'Enviando…' : 'Câmera ou galeria'}
-                  </button>
-                </div>
+                {showCameraView ? (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCapturePhoto}
+                      className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+                    >
+                      Capturar foto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        streamRef.current?.getTracks().forEach((t) => t.stop())
+                        streamRef.current = null
+                        if (videoRef.current) videoRef.current.srcObject = null
+                        setShowCameraView(false)
+                      }}
+                      className="rounded-lg border border-surface-300 px-4 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50"
+                    >
+                      Fechar
+                    </button>
+                  </div>
+                ) : previewObjectUrl ? (
+                  <div className="flex gap-2 justify-center sm:justify-start">
+                    <button
+                      type="button"
+                      onClick={handleConfirmUpload}
+                      disabled={uploadingAvatar}
+                      className="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+                    >
+                      {uploadingAvatar ? 'Enviando…' : 'Enviar foto'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelPreview}
+                      disabled={uploadingAvatar}
+                      className="rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                    <button
+                      type="button"
+                      onClick={() => setShowCameraView(true)}
+                      disabled={uploadingAvatar}
+                      className="flex items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 disabled:opacity-50"
+                    >
+                      <Camera className="h-4 w-4" />
+                      Câmera
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingAvatar}
+                      className="flex items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 disabled:opacity-50"
+                    >
+                      <ImagePlus className="h-4 w-4" />
+                      Galeria
+                    </button>
+                  </div>
+                )}
                 {editing && (
                   <>
                     <p className="text-xs text-surface-500">Ou use um link:</p>

@@ -9,7 +9,10 @@ VALUES (
   5242880,
   ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+  public = EXCLUDED.public,
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 -- Usuário autenticado pode fazer upload só na pasta do próprio user_id
 CREATE POLICY "Users can upload own avatar"
