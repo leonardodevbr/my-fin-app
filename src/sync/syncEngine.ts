@@ -1,5 +1,5 @@
 import { db } from '../db'
-import type { Account, Budget, Category, SyncQueueItem, Transaction } from '../db'
+import type { Account, Budget, Category, SyncQueueItem, Transaction, TransactionGroup } from '../db'
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase'
 
 const LAST_SYNC_KEY = 'finapp_last_sync'
@@ -37,9 +37,14 @@ async function pushTable(
 ): Promise<void> {
   const supabase = getSupabase()
   if (!supabase || items.length === 0) return
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id
   for (const item of items) {
     try {
       const payload = JSON.parse(item.payload) as Record<string, unknown>
+      if (tableName === 'transactions' || tableName === 'transaction_groups') {
+        if (userId) payload.user_id = userId
+      }
       if (item.operation === 'delete') {
         await supabase.from(tableName).delete().eq('id', item.record_id)
       } else if (item.operation === 'insert') {
@@ -52,6 +57,8 @@ async function pushTable(
         await db.accounts.update(item.record_id, { synced_at: now })
       } else if (tableName === 'categories') {
         await db.categories.update(item.record_id, { synced_at: now })
+      } else if (tableName === 'transaction_groups') {
+        await db.transaction_groups.update(item.record_id, { synced_at: now })
       } else if (tableName === 'transactions') {
         await db.transactions.update(item.record_id, { synced_at: now })
       } else if (tableName === 'budgets') {
@@ -92,10 +99,16 @@ function mergeByUpdatedAt<T extends { id: string; updated_at: string }>(
   return Array.from(map.values())
 }
 
+/** Strip user_id from remote row so Dexie stores only Transaction fields. */
+function toTransaction(r: Record<string, unknown>): Transaction {
+  const { user_id: _u, ...rest } = r
+  return rest as unknown as Transaction
+}
+
 export async function pullChanges(since: string): Promise<void> {
   const supabase = getSupabase()
   if (!supabase) return
-  const tables = ['accounts', 'categories', 'transactions', 'budgets'] as const
+  const tables = ['accounts', 'categories', 'transaction_groups', 'transactions', 'budgets'] as const
   for (const tableName of tables) {
     let query = supabase.from(tableName).select('*')
     if (since) {
@@ -107,35 +120,24 @@ export async function pullChanges(since: string): Promise<void> {
     const key = (r: { id: string }) => r.id
     if (tableName === 'accounts') {
       const local = await db.accounts.toArray()
-      const merged = mergeByUpdatedAt(
-        local,
-        remote as Account[],
-        key
-      ) as Account[]
+      const merged = mergeByUpdatedAt(local, remote as Account[], key) as Account[]
       await db.accounts.bulkPut(merged)
     } else if (tableName === 'categories') {
       const local = await db.categories.toArray()
-      const merged = mergeByUpdatedAt(
-        local,
-        remote as Category[],
-        key
-      ) as Category[]
+      const merged = mergeByUpdatedAt(local, remote as Category[], key) as Category[]
       await db.categories.bulkPut(merged)
+    } else if (tableName === 'transaction_groups') {
+      const local = await db.transaction_groups.toArray()
+      const merged = mergeByUpdatedAt(local, remote as TransactionGroup[], key) as TransactionGroup[]
+      await db.transaction_groups.bulkPut(merged)
     } else if (tableName === 'transactions') {
       const local = await db.transactions.toArray()
-      const merged = mergeByUpdatedAt(
-        local,
-        remote as Transaction[],
-        key
-      ) as Transaction[]
+      const remoteTx = (remote as Record<string, unknown>[]).map(toTransaction)
+      const merged = mergeByUpdatedAt(local, remoteTx, key) as Transaction[]
       await db.transactions.bulkPut(merged)
     } else if (tableName === 'budgets') {
       const local = await db.budgets.toArray()
-      const merged = mergeByUpdatedAt(
-        local,
-        remote as Budget[],
-        key
-      ) as Budget[]
+      const merged = mergeByUpdatedAt(local, remote as Budget[], key) as Budget[]
       await db.budgets.bulkPut(merged)
     }
   }

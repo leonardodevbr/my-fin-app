@@ -87,7 +87,9 @@ export async function updateTransaction(
   const now = new Date().toISOString()
   const existing = await db.transactions.get(id)
   if (!existing) return
-  const updated = { ...existing, ...data, updated_at: now }
+  const paid_at =
+    data.is_paid !== undefined ? (data.is_paid ? now : null) : existing.paid_at
+  const updated = { ...existing, ...data, paid_at, updated_at: now }
   await db.transactions.put(updated)
   await db.sync_queue.add({
     id: generateId(),
@@ -114,17 +116,12 @@ export async function deleteTransaction(id: string): Promise<void> {
   })
 }
 
-export async function getTransactionsByInstallmentGroupId(
-  installment_group_id: string
-): Promise<Transaction[]> {
-  return db.transactions
-    .where('installment_group_id')
-    .equals(installment_group_id)
-    .toArray()
+export async function getTransactionsByGroupId(group_id: string): Promise<Transaction[]> {
+  return db.transactions.where('group_id').equals(group_id).toArray()
 }
 
-export async function deleteTransactionGroup(installment_group_id: string): Promise<void> {
-  const group = await getTransactionsByInstallmentGroupId(installment_group_id)
+export async function deleteTransactionGroup(group_id: string): Promise<void> {
+  const group = await getTransactionsByGroupId(group_id)
   const now = new Date().toISOString()
   for (const t of group) {
     await db.transactions.delete(t.id)
@@ -138,6 +135,16 @@ export async function deleteTransactionGroup(installment_group_id: string): Prom
       attempts: 0,
     })
   }
+  await db.transaction_groups.delete(group_id)
+  await db.sync_queue.add({
+    id: generateId(),
+    table_name: 'transaction_groups',
+    record_id: group_id,
+    operation: 'delete',
+    payload: JSON.stringify({ id: group_id }),
+    created_at: now,
+    attempts: 0,
+  })
 }
 
 export function useRecentDescriptions(limit = 20): string[] {

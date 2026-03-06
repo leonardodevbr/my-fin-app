@@ -51,6 +51,15 @@ export function monthRange(monthKey: string): [string, string] {
   return [format(startOfMonth(date), 'yyyy-MM-dd'), format(endOfMonth(date), 'yyyy-MM-dd')]
 }
 
+/** Returns [startDate, endDate] for the last N months (end = last day of current month). */
+export function lastNMonthsRange(n: number): [string, string] {
+  const end = new Date()
+  const start = subMonths(end, n - 1)
+  const startMonth = startOfMonth(start)
+  const endMonth = endOfMonth(end)
+  return [format(startMonth, 'yyyy-MM-dd'), format(endMonth, 'yyyy-MM-dd')]
+}
+
 export function addMonthToKey(monthKey: string, delta: number): string {
   const [y, m] = monthKey.split('-').map(Number)
   const date = new Date(y, m - 1, 1)

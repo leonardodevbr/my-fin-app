@@ -11,6 +11,7 @@ import { DatePicker } from '../../components/ui/DatePicker'
 import { Select } from '../../components/ui/Select'
 import { SearchableSelect } from '../../components/ui/SearchableSelect'
 import { cn, formatCurrencyFromCents } from '../../lib/utils'
+import { useAuth } from '../../hooks/useAuth'
 import { useAccounts } from '../../hooks/useAccounts'
 import { useCategories } from '../../hooks/useCategories'
 import { useRecentDescriptions } from '../../hooks/useTransactions'
@@ -55,15 +56,19 @@ export function TransactionFormModal({
   transaction,
   onSaved,
 }: TransactionFormModalProps) {
+  const { user } = useAuth()
   const accounts = useAccounts(false)
   const categories = useCategories()
   const recentDescriptions = useRecentDescriptions(20)
   const [tagInput, setTagInput] = useState('')
 
-  const { handleSubmit: submitForm } = useTransactionForm(() => {
-    onSaved()
-    onClose()
-  })
+  const { handleSubmit: submitForm } = useTransactionForm(
+    () => {
+      onSaved()
+      onClose()
+    },
+    user?.id
+  )
 
   const defaultValues = useMemo(
     () => getDefaultValues(transaction),
@@ -268,7 +273,7 @@ export function TransactionFormModal({
           <Select
             label="Recorrência"
             value={watch('recurrence')}
-            onChange={(v) => setValue('recurrence', v as import('../../db').RecurrenceType)}
+            onChange={(v) => setValue('recurrence', v as TransactionFormValues['recurrence'])}
             options={RECURRENCE_OPTIONS}
             placeholder="Não repete"
           />

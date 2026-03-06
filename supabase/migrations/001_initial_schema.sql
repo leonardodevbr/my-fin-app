@@ -38,22 +38,46 @@ CREATE TABLE categories (
   synced_at timestamptz
 );
 
+-- Parent for installments/recurring/single. Defines rules; transactions reference group_id.
+CREATE TABLE transaction_groups (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  type text NOT NULL CHECK (type IN ('income', 'expense', 'transfer')),
+  account_id uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  category_id uuid REFERENCES categories(id) ON DELETE SET NULL,
+  payment_mode text NOT NULL CHECK (payment_mode IN ('single', 'installments', 'recurring')),
+
+  installments_total int,
+  amount_total numeric(12,2),
+  amount_per_installment numeric(12,2),
+
+  recurrence_period text CHECK (recurrence_period IN ('daily', 'weekly', 'monthly', 'yearly')),
+  recurrence_end_date date,
+
+  start_date date NOT NULL,
+  notes text,
+  tags jsonb NOT NULL DEFAULT '[]',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  synced_at timestamptz
+);
+
+-- Single financial event on a date. group_id null = standalone; non-null = part of a group.
 CREATE TABLE transactions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  group_id uuid REFERENCES transaction_groups(id) ON DELETE SET NULL,
   account_id uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
   category_id uuid REFERENCES categories(id) ON DELETE SET NULL,
-  type text NOT NULL,
+  type text NOT NULL CHECK (type IN ('income', 'expense', 'transfer')),
   amount numeric(12,2) NOT NULL,
   description text NOT NULL,
   date date NOT NULL,
-  notes text,
-  recurrence text NOT NULL DEFAULT 'none',
-  recurrence_end_date date,
-  installments_total int,
-  installments_current int,
-  installment_group_id uuid,
+  paid_at timestamptz,
   is_paid boolean NOT NULL DEFAULT false,
+  installment_number int,
+  notes text,
   tags jsonb NOT NULL DEFAULT '[]',
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
@@ -77,13 +101,14 @@ CREATE TABLE budgets (
 
 CREATE INDEX idx_accounts_user_id_updated_at ON accounts(user_id, updated_at DESC);
 CREATE INDEX idx_categories_user_id_updated_at ON categories(user_id, updated_at DESC);
+CREATE INDEX idx_transaction_groups_user_id_updated_at ON transaction_groups(user_id, updated_at DESC);
 CREATE INDEX idx_transactions_user_id_updated_at ON transactions(user_id, updated_at DESC);
 CREATE INDEX idx_budgets_user_id_updated_at ON budgets(user_id, updated_at DESC);
 
 CREATE INDEX idx_transactions_user_id_date_desc ON transactions(user_id, date DESC);
 CREATE INDEX idx_transactions_user_id_account_id ON transactions(user_id, account_id);
 CREATE INDEX idx_transactions_user_id_category_id ON transactions(user_id, category_id);
-CREATE INDEX idx_transactions_installment_group_id ON transactions(installment_group_id);
+CREATE INDEX idx_transactions_group_id ON transactions(group_id);
 
 -- =============================================================================
 -- ROW LEVEL SECURITY (RLS)
@@ -91,6 +116,7 @@ CREATE INDEX idx_transactions_installment_group_id ON transactions(installment_g
 
 ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transaction_groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE budgets ENABLE ROW LEVEL SECURITY;
 
@@ -105,6 +131,12 @@ CREATE POLICY categories_select ON categories FOR SELECT USING (user_id = auth.u
 CREATE POLICY categories_insert ON categories FOR INSERT WITH CHECK (user_id = auth.uid());
 CREATE POLICY categories_update ON categories FOR UPDATE USING (user_id = auth.uid());
 CREATE POLICY categories_delete ON categories FOR DELETE USING (user_id = auth.uid());
+
+-- transaction_groups
+CREATE POLICY transaction_groups_select ON transaction_groups FOR SELECT USING (user_id = auth.uid());
+CREATE POLICY transaction_groups_insert ON transaction_groups FOR INSERT WITH CHECK (user_id = auth.uid());
+CREATE POLICY transaction_groups_update ON transaction_groups FOR UPDATE USING (user_id = auth.uid());
+CREATE POLICY transaction_groups_delete ON transaction_groups FOR DELETE USING (user_id = auth.uid());
 
 -- transactions
 CREATE POLICY transactions_select ON transactions FOR SELECT USING (user_id = auth.uid());
@@ -124,6 +156,7 @@ CREATE POLICY budgets_delete ON budgets FOR DELETE USING (user_id = auth.uid());
 
 ALTER PUBLICATION supabase_realtime ADD TABLE accounts;
 ALTER PUBLICATION supabase_realtime ADD TABLE categories;
+ALTER PUBLICATION supabase_realtime ADD TABLE transaction_groups;
 ALTER PUBLICATION supabase_realtime ADD TABLE transactions;
 
 -- =============================================================================
@@ -137,7 +170,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF p_table NOT IN ('accounts', 'categories', 'transactions', 'budgets') THEN
+  IF p_table NOT IN ('accounts', 'categories', 'transaction_groups', 'transactions', 'budgets') THEN
     RAISE EXCEPTION 'Invalid table name: %', p_table;
   END IF;
   RETURN QUERY EXECUTE format(
@@ -164,6 +197,7 @@ $$;
 
 CREATE TRIGGER accounts_updated_at BEFORE UPDATE ON accounts FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER categories_updated_at BEFORE UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER transaction_groups_updated_at BEFORE UPDATE ON transaction_groups FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER transactions_updated_at BEFORE UPDATE ON transactions FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER budgets_updated_at BEFORE UPDATE ON budgets FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 

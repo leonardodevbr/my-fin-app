@@ -8,11 +8,13 @@ import {
   type Category,
   type SyncQueueItem,
   type Transaction,
+  type TransactionGroup,
 } from './schema'
 
 export class FinAppDB extends Dexie {
   accounts!: Table<Account, string>
   categories!: Table<Category, string>
+  transaction_groups!: Table<TransactionGroup, string>
   transactions!: Table<Transaction, string>
   budgets!: Table<Budget, string>
   sync_queue!: Table<SyncQueueItem, string>
@@ -22,6 +24,7 @@ export class FinAppDB extends Dexie {
     this.version(DB_VERSION).stores({
       accounts: SCHEMA.accounts,
       categories: SCHEMA.categories,
+      transaction_groups: SCHEMA.transaction_groups,
       transactions: SCHEMA.transactions,
       budgets: SCHEMA.budgets,
       sync_queue: SCHEMA.sync_queue,
@@ -36,6 +39,8 @@ export type {
   Category,
   SyncQueueItem,
   Transaction,
+  TransactionGroup,
   TransactionType,
-  RecurrenceType,
+  PaymentMode,
+  RecurrencePeriod,
 } from './schema'

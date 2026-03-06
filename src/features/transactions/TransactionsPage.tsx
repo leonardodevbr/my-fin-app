@@ -5,7 +5,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import type { Transaction } from '../../db'
 import { useTransactions } from '../../hooks/useTransactions'
-import { updateTransaction, deleteTransaction, deleteTransactionGroup, getTransactionsByInstallmentGroupId } from '../../hooks/useTransactions'
+import { updateTransaction, deleteTransaction, deleteTransactionGroup, getTransactionsByGroupId } from '../../hooks/useTransactions'
 import { useDebounce } from '../../hooks/useDebounce'
 import { monthRange, toMonthKey } from '../../lib/utils'
 import { TransactionFilters, type TransactionFilter } from './TransactionFilters'
@@ -126,9 +126,7 @@ export function TransactionsPage() {
   }
 
   const handleDeleteClick = async (t: Transaction) => {
-    const group = t.installment_group_id
-      ? await getTransactionsByInstallmentGroupId(t.installment_group_id)
-      : []
+    const group = t.group_id ? await getTransactionsByGroupId(t.group_id) : []
     setDeleteState({
       open: true,
       transaction: t,
@@ -148,9 +146,9 @@ export function TransactionsPage() {
   }
 
   const confirmDeleteAll = async () => {
-    if (!deleteState?.transaction.installment_group_id) return
+    if (!deleteState?.transaction.group_id) return
     try {
-      await deleteTransactionGroup(deleteState.transaction.installment_group_id)
+      await deleteTransactionGroup(deleteState.transaction.group_id)
       toast.success('Parcelas excluídas')
     } catch {
       toast.error('Erro ao excluir')

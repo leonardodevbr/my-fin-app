@@ -268,73 +268,78 @@ export function ProfilePage() {
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-6">
           <div className="flex flex-col items-center w-full sm:w-auto sm:items-start gap-3">
-            <div className="h-40 w-40 sm:h-48 sm:w-48 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-3xl sm:text-4xl font-semibold border-2 border-surface-200 overflow-hidden shrink-0 relative">
-              {showCameraView ? (
-                <video
-                  ref={videoRef}
-                  playsInline
-                  muted
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-              ) : previewObjectUrl ? (
-                <img src={previewObjectUrl} alt="Preview" className="h-full w-full object-cover" />
-              ) : (editing ? avatarUrl.trim() : avatar) ? (
-                <img
-                  src={(editing ? avatarUrl.trim() : avatar) ?? ''}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  onError={(e) => {
-                    const el = e.target as HTMLImageElement
-                    el.style.display = 'none'
-                    const fallback = el.nextElementSibling as HTMLElement
-                    if (fallback) fallback.style.display = 'flex'
-                  }}
-                />
-              ) : null}
-              {!previewObjectUrl && !showCameraView && (
-                <span
-                  className="h-full w-full flex items-center justify-center"
-                  style={{
-                    display: (editing ? avatarUrl.trim() : avatar) ? 'none' : 'flex',
-                  }}
-                >
-                  {initials}
-                </span>
-              )}
-            </div>
-            {isSupabaseConfigured && (
-              <div className="w-full space-y-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="hidden"
-                  onChange={handleAvatarFileSelect}
-                />
-                {showCameraView ? (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleCapturePhoto}
-                      className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-                    >
-                      Capturar foto
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        streamRef.current?.getTracks().forEach((t) => t.stop())
-                        streamRef.current = null
-                        if (videoRef.current) videoRef.current.srcObject = null
-                        setShowCameraView(false)
+            {showCameraView ? (
+              <div className="flex flex-col items-center gap-3 w-full">
+                <div className="relative w-full aspect-square max-w-[280px] rounded-full overflow-hidden border-2 border-surface-200 bg-surface-900">
+                  <video
+                    ref={videoRef}
+                    playsInline
+                    muted
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex gap-2 justify-center">
+                  <button
+                    type="button"
+                    onClick={handleCapturePhoto}
+                    className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+                  >
+                    Capturar foto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      streamRef.current?.getTracks().forEach((t) => t.stop())
+                      streamRef.current = null
+                      if (videoRef.current) videoRef.current.srcObject = null
+                      setShowCameraView(false)
+                    }}
+                    className="rounded-lg border border-surface-300 px-4 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="h-24 w-24 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-2xl font-semibold border-2 border-surface-200 overflow-hidden shrink-0 relative">
+                  {previewObjectUrl ? (
+                    <img src={previewObjectUrl} alt="Preview" className="h-full w-full object-cover" />
+                  ) : (editing ? avatarUrl.trim() : avatar) ? (
+                    <img
+                      src={(editing ? avatarUrl.trim() : avatar) ?? ''}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        const el = e.target as HTMLImageElement
+                        el.style.display = 'none'
+                        const fallback = el.nextElementSibling as HTMLElement
+                        if (fallback) fallback.style.display = 'flex'
                       }}
-                      className="rounded-lg border border-surface-300 px-4 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50"
+                    />
+                  ) : null}
+                  {!previewObjectUrl && (
+                    <span
+                      className="h-full w-full flex items-center justify-center"
+                      style={{
+                        display: (editing ? avatarUrl.trim() : avatar) ? 'none' : 'flex',
+                      }}
                     >
-                      Fechar
-                    </button>
-                  </div>
-                ) : previewObjectUrl ? (
-                  <div className="flex gap-2 justify-center sm:justify-start">
+                      {initials}
+                    </span>
+                  )}
+                </div>
+                {isSupabaseConfigured && (
+                  <div className="w-full space-y-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      onChange={handleAvatarFileSelect}
+                    />
+                    {previewObjectUrl ? (
+                  <div className="flex gap-2 justify-center">
                     <button
                       type="button"
                       onClick={handleConfirmUpload}
@@ -353,7 +358,7 @@ export function ProfilePage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                  <div className="flex flex-wrap gap-2 justify-center">
                     <button
                       type="button"
                       onClick={() => setShowCameraView(true)}
@@ -386,7 +391,9 @@ export function ProfilePage() {
                     />
                   </>
                 )}
-              </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
           <div className="flex-1 space-y-4 min-w-0">
