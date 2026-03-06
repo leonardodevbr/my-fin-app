@@ -7,9 +7,12 @@ import {
   Tags,
   BarChart3,
   PiggyBank,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useAppStore } from '../../store/appStore'
+import { useAuth } from '../../hooks/useAuth'
+import { isSupabaseConfigured } from '../../lib/supabase'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -28,6 +31,7 @@ function isNavActive(pathname: string, to: string): boolean {
 export function Sidebar() {
   const { sidebarOpen, setSidebarOpen } = useAppStore()
   const { pathname } = useLocation()
+  const { signOut } = useAuth()
   const currentPath = (pathname || '/').replace(/^#/, '') || '/'
 
   return (
@@ -61,7 +65,7 @@ export function Sidebar() {
           </button>
         </div>
         <nav className="flex-1 overflow-y-auto py-4 px-2">
-          <ul className="space-y-1">
+          <ul className="list-none space-y-1 pl-0">
             {navItems.map(({ to, icon: Icon, label }) => {
               const active = isNavActive(currentPath, to)
               return (
@@ -83,6 +87,18 @@ export function Sidebar() {
               )
             })}
           </ul>
+          {isSupabaseConfigured && (
+            <div className="mt-2 border-t border-surface-700 pt-2">
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-surface-300 hover:bg-surface-800 hover:text-white transition-colors"
+              >
+                <LogOut className="h-5 w-5 shrink-0" />
+                <span>Sair</span>
+              </button>
+            </div>
+          )}
         </nav>
       </aside>
     </>

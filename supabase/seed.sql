@@ -1,22 +1,44 @@
--- Finapp seed: default categories (Brazilian financial context)
--- New users get these automatically via trigger (on_auth_user_created).
--- This script adds the same categories for any existing user(s).
+-- =============================================================================
+-- Finapp seed: categorias padrão + conta padrão (contexto financeiro BR)
+-- =============================================================================
+--
+-- O que este seed faz:
+--   Para cada usuário em auth.users:
+--     - Insere 12 categorias (Salário, Freelance, Investimentos, Alimentação, etc.)
+--     - Insere 1 conta padrão "Carteira" (tipo cash).
+--
+-- Transações e orçamentos NÃO são inseridos aqui (são criados pelo app).
+--
+-- Como rodar no Supabase Cloud:
+--   1. Rode antes as migrations (incluindo 002_default_account.sql).
+--   2. Authentication → certifique-se de ter pelo menos um usuário.
+--   3. SQL Editor → New query → cole todo este arquivo → Run.
+--   4. Confira em Table Editor: categories (12 linhas/usuário), accounts (1 linha/usuário).
+--
+-- Novos usuários: ao se cadastrar, o trigger on_auth_user_created já cria
+-- categorias e conta padrão automaticamente (não precisa rodar o seed de novo).
+--
+-- =============================================================================
 
--- Default categories created:
--- Income:  Salário, Freelance, Investimentos
--- Expense: Alimentação, Transporte, Moradia, Saúde, Educação, Lazer, Vestuário, Serviços, Outros
+-- Categorias: Receita: Salário, Freelance, Investimentos | Despesa: Alimentação, Transporte, Moradia, Saúde, Educação, Lazer, Vestuário, Serviços, Outros
+-- Conta: 1x "Carteira" (cash) por usuário
 
--- Create default categories for the first existing user (e.g. after initial setup)
 DO $$
 DECLARE
-  first_user_id uuid;
+  r record;
+  n int := 0;
 BEGIN
-  SELECT id INTO first_user_id FROM auth.users ORDER BY created_at LIMIT 1;
-  IF first_user_id IS NOT NULL THEN
-    PERFORM create_default_categories_for_user(first_user_id);
-    RAISE NOTICE 'Default categories created for user %', first_user_id;
+  FOR r IN SELECT id FROM auth.users
+  LOOP
+    PERFORM create_default_categories_for_user(r.id);
+    PERFORM create_default_account_for_user(r.id);
+    n := n + 1;
+  END LOOP;
+
+  IF n = 0 THEN
+    RAISE NOTICE 'Nenhum usuário em auth.users. Crie um usuário (Auth ou pelo app) e rode este seed de novo, ou cadastre-se no app que o trigger já cria categorias e conta padrão.';
   ELSE
-    RAISE NOTICE 'No users found. Default categories will be created when the first user signs up.';
+    RAISE NOTICE 'Categorias e conta padrão criadas para % usuário(s). Categorias: % linhas. Contas: % linhas.', n, n * 12, n;
   END IF;
 END
 $$;
