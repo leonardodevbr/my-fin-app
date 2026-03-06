@@ -42,11 +42,11 @@ export function Sidebar() {
           sidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         )}
       />
-      {/* Sidebar: no mobile só aparece quando open; no desktop sempre visível */}
+      {/* Sidebar: só visível quando open (mobile e desktop) */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-surface-900 text-white border-r border-surface-700 transition-transform duration-200 ease-out lg:translate-x-0',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-surface-900 text-white border-r border-surface-700 transition-transform duration-200 ease-out',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         <div className="flex items-center justify-between h-14 px-4 border-b border-surface-700">

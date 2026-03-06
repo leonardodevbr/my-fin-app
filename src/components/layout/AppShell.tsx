@@ -16,13 +16,13 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen bg-surface-100">
       <Sidebar />
-      <div className="lg:pl-64">
+      <div className={sidebarOpen ? 'lg:pl-64' : ''}>
         <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-surface-200 bg-white px-4 lg:px-6">
           <button
             type="button"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-surface-100 lg:hidden"
-            aria-label="Abrir menu"
+            className="p-2 rounded-lg hover:bg-surface-100"
+            aria-label={sidebarOpen ? 'Fechar menu' : 'Abrir menu'}
           >
             <Menu className="h-6 w-6 text-surface-600" />
           </button>
