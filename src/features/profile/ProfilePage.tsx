@@ -221,7 +221,7 @@ export function ProfilePage() {
                   className="hidden"
                   onChange={handleAvatarFile}
                 />
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
