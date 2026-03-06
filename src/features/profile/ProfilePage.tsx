@@ -268,7 +268,6 @@ export function ProfilePage() {
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-6">
           <div className="flex flex-col items-center w-full sm:w-auto sm:items-start gap-3">
-<<<<<<< HEAD
             {showCameraView ? (
               <div className="flex flex-col items-center gap-3 w-full">
                 <div className="relative w-full aspect-square max-w-[280px] rounded-full overflow-hidden border-2 border-surface-200 bg-surface-900">
@@ -280,41 +279,6 @@ export function ProfilePage() {
                   />
                 </div>
                 <div className="flex gap-2 justify-center">
-=======
-            <div className="h-24 w-24 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-2xl font-semibold border-2 border-surface-200 overflow-hidden shrink-0">
-              {(editing ? avatarUrl.trim() : avatar) ? (
-                <img
-                  src={(editing ? avatarUrl.trim() : avatar) ?? ''}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  onError={(e) => {
-                    const el = e.target as HTMLImageElement
-                    el.style.display = 'none'
-                    const fallback = el.nextElementSibling as HTMLElement
-                    if (fallback) fallback.style.display = 'flex'
-                  }}
-                />
-              ) : null}
-              <span
-                className="h-full w-full flex items-center justify-center"
-                style={{
-                  display: (editing ? avatarUrl.trim() : avatar) ? 'none' : 'flex',
-                }}
-              >
-                {initials}
-              </span>
-            </div>
-            {isSupabaseConfigured && (
-              <div className="w-full space-y-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="hidden"
-                  onChange={handleAvatarFile}
-                />
-                <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
->>>>>>> 36a8968842d40958ba9c07e197aad181dcec4921
                   <button
                     type="button"
                     onClick={handleCapturePhoto}

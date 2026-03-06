@@ -2,12 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo } from 'react'
 import { db } from '../../db'
 import type { Transaction } from '../../db'
-import {
-  monthRange,
-  toMonthKey,
-  lastNMonthsRange,
-  addMonthToKey,
-} from '../../lib/utils'
+import { monthRange, toMonthKey, lastNMonthsRange, addMonthToKey } from '../../lib/utils'
 import {
   startOfMonth,
   endOfMonth,
@@ -262,14 +257,22 @@ function aggregateTrendsByCategory(
     monthList.push(toMonthKey(cur))
     cur = addMonths(cur, 1)
   }
-  const series = Object.entries(byCategory).map(([cid, byMonth]) => ({
-    categoryId: cid === '_none' ? null : cid,
-    points: monthList.map((month) => ({
+  const series = Object.entries(byCategory).map(([cid, byMonth]) => {
+    const points = monthList.map((month) => ({
       month,
       amount: byMonth[month] ?? 0,
-    })),
-    projected: null as number | null,
-  }))
+    }))
+    const lastThree = points.slice(-3).map((p) => p.amount).filter((a) => a > 0)
+    const projected =
+      lastThree.length > 0
+        ? Math.round(lastThree.reduce((s, a) => s + a, 0) / lastThree.length)
+        : null
+    return {
+      categoryId: cid === '_none' ? null : cid,
+      points,
+      projected,
+    }
+  })
   return { series, months: monthList }
 }
 
