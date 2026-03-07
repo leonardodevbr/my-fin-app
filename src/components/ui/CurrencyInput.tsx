@@ -1,4 +1,4 @@
-import { useRef, useCallback, forwardRef } from 'react'
+import { useRef, useCallback, forwardRef, type MutableRefObject } from 'react'
 import { formatCurrencyFromCents, parseCurrencyToCents } from '../../lib/utils'
 
 const MAX_CENTS = 99999999999 // 999.999.999,99
@@ -22,7 +22,7 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(fu
   error,
   disabled,
 }, ref) {
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null) as MutableRefObject<HTMLInputElement | null>
   const setRef = useCallback(
     (el: HTMLInputElement | null) => {
       inputRef.current = el

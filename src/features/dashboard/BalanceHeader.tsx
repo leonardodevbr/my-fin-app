@@ -31,7 +31,7 @@ function useCountUp(value: number, enabled: boolean, visible: boolean): number {
 
 export function BalanceHeader() {
   const { selectedMonth } = useAppStore()
-  const { accounts, isLoading: accountsLoading } = useAccountsWithLoading(true)
+  const { isLoading: accountsLoading } = useAccountsWithLoading(true)
   const transactions = useTransactions({
     from: monthRange(selectedMonth)[0],
     to: monthRange(selectedMonth)[1],
