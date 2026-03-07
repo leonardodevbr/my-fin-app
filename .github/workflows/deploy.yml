@@ -43,11 +43,21 @@ jobs:
           SSH_PORT: 22022
           DEPLOY_DIR: ${{ secrets.DIRECTORY }}
         run: |
-          # Sincroniza só o dist/ para o diretório do subdomínio
-          rsync -avz --delete \
-            -e "ssh -p 22022 -o StrictHostKeyChecking=no" \
-            ./dist/ \
-            $USERNAME@$HOST:$DEPLOY_DIR/
+          # Zipa só o dist/
+          cd dist && zip -r ../dist.zip . && cd ..
+
+          # Envia o zip
+          scp -P $SSH_PORT -o StrictHostKeyChecking=no \
+            dist.zip $USERNAME@$HOST:~/dist.zip
+
+          # Extrai no servidor e limpa
+          ssh -p $SSH_PORT -o StrictHostKeyChecking=no $USERNAME@$HOST << EOF
+            # Limpa o destino e extrai
+            rm -rf $DEPLOY_DIR/*
+            unzip -o ~/dist.zip -d $DEPLOY_DIR/
+            rm ~/dist.zip
+            echo "✅ Deploy concluído"
+          EOF
 
       - name: Notify
         run: echo "✅ Deploy concluído em $(date)"
