@@ -50,10 +50,20 @@ export function ImportPage() {
       toast.error('Sincronização não configurada')
       return
     }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      toast.error('Sessão expirada. Faça login novamente.', { duration: 5000 })
+      return
+    }
     setSendingEmail(true)
     try {
       const { data, error } = await supabase.functions.invoke('send-template-email', {
         method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       })
       if (error) throw error
       if (data?.error) throw new Error(data.error)
@@ -62,7 +72,13 @@ export function ImportPage() {
       toast.success('E-mail enviado! Verifique sua caixa de entrada.')
       setTemplateModalOpen(false)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Falha ao enviar e-mail')
+      const msg =
+        e instanceof Error ? e.message : 'Falha ao enviar e-mail'
+      const friendly =
+        msg.includes('401') || msg.includes('JWT') || msg.includes('Invalid JWT')
+          ? 'Sessão expirada ou inválida. Faça login novamente.'
+          : msg
+      toast.error(friendly, { duration: 5000 })
     } finally {
       setSendingEmail(false)
     }
