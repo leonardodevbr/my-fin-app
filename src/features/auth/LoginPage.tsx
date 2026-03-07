@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Wallet, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { AppLogo } from '../../components/layout/AppLogo'
 import { useAuth } from '../../hooks/useAuth'
 
 export function LoginPage() {
@@ -95,10 +96,7 @@ export function LoginPage() {
     <div className="min-h-screen bg-surface-100 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm rounded-2xl border border-surface-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col items-center gap-2 mb-6">
-          <div className="rounded-full bg-primary-100 p-3">
-            <Wallet className="h-8 w-8 text-primary-600" />
-          </div>
-          <h1 className="text-xl font-semibold text-surface-900">NunFi</h1>
+          <AppLogo height={48} />
           <p className="text-sm text-surface-500">Entre para sincronizar suas finanças</p>
         </div>
 
