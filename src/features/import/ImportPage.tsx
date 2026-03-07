@@ -60,12 +60,14 @@ export function ImportPage() {
     setSendingEmail(true)
     try {
       const url = `${supabaseUrl}/functions/v1/send-template-email`
+      const token = session.access_token
       const res = await fetch(url, {
         method: 'POST',
         cache: 'no-store',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${token}`,
+          'X-Client-JWT': token,
           apikey: supabaseAnonKey,
         },
       })

@@ -72,6 +72,9 @@ async function pushTable(
   }
 }
 
+/** Ordem obrigatória: FKs (transaction_groups) antes de dependentes (transactions). */
+const PUSH_TABLE_ORDER = ['accounts', 'categories', 'transaction_groups', 'transactions', 'budgets']
+
 export async function pushChanges(): Promise<void> {
   if (!isSupabaseConfigured) return
   const items = await db.sync_queue.orderBy('created_at').toArray()
@@ -80,8 +83,12 @@ export async function pushChanges(): Promise<void> {
     acc[item.table_name].push(item)
     return acc
   }, {})
+  for (const tableName of PUSH_TABLE_ORDER) {
+    const tableItems = byTable[tableName]
+    if (tableItems?.length) await pushTable(tableName, tableItems)
+  }
   for (const [tableName, tableItems] of Object.entries(byTable)) {
-    await pushTable(tableName, tableItems)
+    if (!PUSH_TABLE_ORDER.includes(tableName)) await pushTable(tableName, tableItems)
   }
 }
 

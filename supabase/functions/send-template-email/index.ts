@@ -1,38 +1,44 @@
 // Supabase Edge Function: envia a planilha modelo por e-mail ao usuário logado (Resend).
 // Configurar: supabase secrets set RESEND_API_KEY=re_xxx
 // Opcional: FROM_EMAIL (ex: "My Fin App <noreply@seudominio.com>")
-// Se usar o dashboard (sem CLI): crie também o arquivo templateDefinition.ts nesta função.
+// Um único arquivo: pode colar direto no dashboard (sem templateDefinition.ts).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import * as XLSX from 'https://esm.sh/xlsx@0.18.5'
-import {
-  TRANSACTIONS_HEADERS,
-  GROUPS_HEADERS,
-  TRANSACTIONS_INSTRUCTION,
-  GROUPS_INSTRUCTION,
-} from './templateDefinition.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') ?? 'My Fin App <onboarding@resend.dev>'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-client-jwt',
 }
+
+const TRANSACTIONS_HEADERS = [
+  'type', 'amount', 'description', 'date', 'account_name', 'category_name',
+  'is_paid', 'payment_mode', 'installments_total', 'notes',
+]
+const GROUPS_HEADERS = [
+  'name', 'type', 'account_name', 'category_name', 'payment_mode',
+  'amount_per_installment', 'amount_total', 'installments_total',
+  'recurrence_period', 'start_date', 'recurrence_end_date',
+]
+const TRANSACTIONS_INSTRUCTION = 'Preencha a partir da linha 4. Colunas: type (income/expense/transfer), amount, description, date, account_name, category_name, is_paid (true/false), payment_mode, installments_total, notes'
+const GROUPS_INSTRUCTION = 'Preencha a partir da linha 4. Colunas: name, type, account_name, category_name, payment_mode (single/recurring/installments), amount_per_installment, amount_total, installments_total, recurrence_period, start_date, recurrence_end_date'
 
 function buildTemplateXlsxBase64(): string {
   const wb = XLSX.utils.book_new()
   const transactionsData = [
     ['Transações'],
     [TRANSACTIONS_INSTRUCTION],
-    [...TRANSACTIONS_HEADERS],
+    TRANSACTIONS_HEADERS,
   ]
   const wsTransactions = XLSX.utils.aoa_to_sheet(transactionsData)
   XLSX.utils.book_append_sheet(wb, wsTransactions, 'transactions')
   const groupsData = [
     ['Grupos / Parcelamentos'],
     [GROUPS_INSTRUCTION],
-    [...GROUPS_HEADERS],
+    GROUPS_HEADERS,
   ]
   const wsGroups = XLSX.utils.aoa_to_sheet(groupsData)
   XLSX.utils.book_append_sheet(wb, wsGroups, 'transaction_groups')
@@ -57,12 +63,15 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: 'RESEND_API_KEY não configurada' }, 500)
     }
 
+    // Safari/iOS e alguns gateways podem não repassar Authorization; aceitar também X-Client-JWT
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
+    const customJwt = req.headers.get('X-Client-JWT')
+    const token = authHeader?.startsWith('Bearer ')
+      ? authHeader.replace('Bearer ', '')
+      : customJwt?.trim() ?? null
+    if (!token) {
       return jsonResponse({ error: 'Não autorizado' }, 401)
     }
-
-    const token = authHeader.replace('Bearer ', '')
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
