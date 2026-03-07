@@ -63,11 +63,6 @@ function resolveAccountId(
   return accountMapping[accountName.trim()] ?? defaultAccountId
 }
 
-/** Reais -> centavos for DB (schema stores cents). */
-function reaisToCents(reais: number): number {
-  return Math.round(reais * 100)
-}
-
 /** Generate child transactions for a group (single, installments, or recurring 12 months). Group amounts are in cents. */
 function createGroupTransactions(
   group: TransactionGroup,
@@ -167,10 +162,13 @@ function createGroupTransactions(
 }
 
 export async function runImport(options: ImportRunOptions): Promise<ImportRunResult> {
+  // NOTE: All monetary values from spreadsheet arrive as BRL reais (e.g. 650.00)
+  // and must be converted to integer cents (× 100) before saving to Dexie/Supabase.
   const {
     userId,
     defaultAccountId,
     categoryMapping,
+    accountMapping,
     newCategories,
     transactions,
     groups,
@@ -235,8 +233,10 @@ export async function runImport(options: ImportRunOptions): Promise<ImportRunRes
       for (const parsed of groups) {
         const category_id = resolveCategoryId(parsed.categoryHint, categoryMapping, newCategoryIds)
         const account_id = resolveAccountId(parsed.account_name, accountMapping, defaultAccountId)
-        const amount_total_cents = parsed.amount_total != null ? reaisToCents(parsed.amount_total) : null
-        const amount_per_installment_cents = parsed.amount_per_installment != null ? reaisToCents(parsed.amount_per_installment) : null
+        const amount_total_cents =
+          parsed.amount_total != null ? Math.round(parsed.amount_total * 100) : null
+        const amount_per_installment_cents =
+          parsed.amount_per_installment != null ? Math.round(parsed.amount_per_installment * 100) : null
         const group: TransactionGroup = {
           id: generateId(),
           user_id: userId,
@@ -298,7 +298,7 @@ export async function runImport(options: ImportRunOptions): Promise<ImportRunRes
           account_id,
           category_id,
           type: tx.type,
-          amount: reaisToCents(tx.amount),
+          amount: Math.round(tx.amount * 100),
           description: tx.description,
           date: tx.date,
           paid_at: tx.is_paid ? now : null,

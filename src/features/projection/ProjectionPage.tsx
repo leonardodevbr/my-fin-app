@@ -9,7 +9,7 @@ import { ProjectionFilters } from './components/ProjectionFilters'
 import { BalanceAlertBanner } from './components/BalanceAlertBanner'
 import { ProjectionChart } from './components/ProjectionChart'
 import { ProjectionTable } from './components/ProjectionTable'
-import { toISODate } from '../../lib/utils'
+import { toISODate, formatCurrencyFromCents } from '../../lib/utils'
 
 function getDateRange(preset: PeriodPreset): { from: string; to: string } {
   const today = new Date()
@@ -87,7 +87,7 @@ export function ProjectionPage() {
           .map((me) => ({
             type: 'negative_balance' as const,
             date: `${me.month}-01`,
-            message: `Saldo negativo previsto em ${me.month} (${(me.closing_balance / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})`,
+            message: `Saldo negativo previsto em ${me.month} (${formatCurrencyFromCents(me.closing_balance)})`,
             severity: 'danger' as const,
           }))
       } else if (scenario === 'optimistic') {

@@ -90,6 +90,7 @@ export function BudgetFormModal({
 
   const onSubmit = async (data: FormValues) => {
     try {
+      // CurrencyInput stores amount in cents; db.budgets.amount is cents
       const amount = Math.round(data.amount) || 0
       if (amount <= 0) {
         toast.error('Informe o limite em valor positivo.')

@@ -11,8 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import type { Transaction } from '../../db'
-import { useAccount } from '../../hooks/useAccounts'
-import { useAccountBalance } from '../../hooks/useAccounts'
+import { useAccount, useAccountBalance, useComputedAccountBalance } from '../../hooks/useAccounts'
 import { useTransactions } from '../../hooks/useTransactions'
 import { updateTransaction, deleteTransaction, deleteTransactionGroup, getTransactionsByGroupId } from '../../hooks/useTransactions'
 import { useAccountMonthlySummary } from './useAccountMonthlySummary'
@@ -31,7 +30,9 @@ export function AccountDetailPage() {
   const { id } = useParams<{ id: string }>()
   const accountId = id ?? null
   const account = useAccount(accountId)
-  const { balancePaid, balanceProjected } = useAccountBalance(accountId)
+  const { balanceProjected } = useAccountBalance(accountId)
+  const saldoAtual = useComputedAccountBalance(accountId ?? '')
+  const saldoPrevisto = (account?.balance ?? 0) + balanceProjected
   const monthlyData = useAccountMonthlySummary(accountId, 6)
 
   const [tab, setTab] = useState<'transactions' | 'summary'>('transactions')
@@ -122,10 +123,10 @@ export function AccountDetailPage() {
             <span
               className={cn(
                 'font-semibold tabular-nums',
-                balancePaid >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
+                saldoAtual >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
               )}
             >
-              {formatCurrencyFromCents(balancePaid, currency)}
+              {formatCurrencyFromCents(saldoAtual, currency)}
             </span>
           </p>
           <p className="text-sm text-surface-600">
@@ -133,10 +134,10 @@ export function AccountDetailPage() {
             <span
               className={cn(
                 'font-semibold tabular-nums',
-                balanceProjected >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
+                saldoPrevisto >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
               )}
             >
-              {formatCurrencyFromCents(balanceProjected, currency)}
+              {formatCurrencyFromCents(saldoPrevisto, currency)}
             </span>
           </p>
         </div>

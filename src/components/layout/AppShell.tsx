@@ -1,5 +1,6 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useEffect } from 'react'
 import { Menu, RefreshCw } from 'lucide-react'
+import { cn } from '../../lib/utils'
 import { Sidebar } from './Sidebar'
 import { BottomNav } from './BottomNav'
 import { useAppStore } from '../../store/appStore'
@@ -14,10 +15,24 @@ export function AppShell({ children }: AppShellProps) {
   const { sidebarOpen, setSidebarOpen } = useAppStore()
   const { syncing, last_synced, error, syncNow } = useSyncStatus()
 
+  useEffect(() => {
+    if (window.innerWidth >= 1024) setSidebarOpen(true)
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) setSidebarOpen(true)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [setSidebarOpen])
+
   return (
     <div className="min-h-screen bg-surface-100">
       <Sidebar />
-      <div className={`min-w-0 ${sidebarOpen ? 'lg:pl-64' : ''}`}>
+      <div
+        className={cn(
+          'min-w-0 flex-1 transition-all duration-200',
+          sidebarOpen && 'lg:pl-64'
+        )}
+      >
         <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-surface-200 bg-white px-4 lg:px-6">
           <button
             type="button"

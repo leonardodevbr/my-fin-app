@@ -1,6 +1,10 @@
 /**
  * Pure computation module for financial projection.
  * Reads from Dexie only; never writes. Generates virtual future events in memory.
+ *
+ * All monetary amounts (Transaction.amount, group amounts, eventDelta, ProjectionMonthEntry
+ * income/expenses/net/closing_balance, metadata.startingBalance/lowestBalance/highestBalance)
+ * are in integer cents. Display layers must use formatCurrencyFromCents().
  */
 
 import { addMonths } from 'date-fns'

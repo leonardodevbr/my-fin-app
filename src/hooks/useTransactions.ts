@@ -6,16 +6,19 @@ import { generateId } from '../lib/utils'
 export function useTransactions(filters?: { accountId?: string; from?: string; to?: string }) {
   const list = useLiveQuery(
     async () => {
+      if (filters?.from && filters?.to) {
+        let results = await db.transactions
+          .where('date')
+          .between(filters.from!, filters.to!, true, true)
+          .toArray()
+        if (filters.accountId) {
+          results = results.filter((t) => t.account_id === filters!.accountId)
+        }
+        return results.sort((a, b) => b.date.localeCompare(a.date))
+      }
       let collection = db.transactions.orderBy('date').reverse()
       if (filters?.accountId) {
         collection = collection.filter((t) => t.account_id === filters.accountId)
-      }
-      if (filters?.from || filters?.to) {
-        return (await collection.toArray()).filter((t) => {
-          if (filters.from && t.date < filters.from) return false
-          if (filters.to && t.date > filters.to) return false
-          return true
-        })
       }
       return collection.toArray()
     },
@@ -31,16 +34,19 @@ export function useTransactionsWithLoading(filters?: {
 }): { transactions: Transaction[]; isLoading: boolean } {
   const list = useLiveQuery(
     async () => {
+      if (filters?.from && filters?.to) {
+        let results = await db.transactions
+          .where('date')
+          .between(filters.from!, filters.to!, true, true)
+          .toArray()
+        if (filters.accountId) {
+          results = results.filter((t) => t.account_id === filters!.accountId)
+        }
+        return results.sort((a, b) => b.date.localeCompare(a.date))
+      }
       let collection = db.transactions.orderBy('date').reverse()
       if (filters?.accountId) {
         collection = collection.filter((t) => t.account_id === filters.accountId)
-      }
-      if (filters?.from || filters?.to) {
-        return (await collection.toArray()).filter((t) => {
-          if (filters?.from && t.date < filters.from) return false
-          if (filters?.to && t.date > filters.to) return false
-          return true
-        })
       }
       return collection.toArray()
     },

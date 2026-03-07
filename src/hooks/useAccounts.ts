@@ -107,6 +107,61 @@ export async function deleteAccount(id: string): Promise<void> {
   })
 }
 
+/** Computed balance = account.balance (initial) + delta from paid transactions only. */
+export function useComputedAccountBalance(accountId: string): number {
+  const balance = useLiveQuery(
+    async () => {
+      const account = await db.accounts.get(accountId)
+      if (!account) return 0
+      const paidTransactions = await db.transactions
+        .where('account_id')
+        .equals(accountId)
+        .filter((t) => t.is_paid === true)
+        .toArray()
+      const delta = paidTransactions.reduce((sum, t) => {
+        if (t.type === 'income') return sum + t.amount
+        if (t.type === 'expense') return sum - t.amount
+        return sum
+      }, 0)
+      return account.balance + delta
+    },
+    [accountId]
+  )
+  return balance ?? 0
+}
+
+/** Map of account id -> computed balance (initial + paid tx delta) for all active accounts. */
+export function useAllComputedBalances(): Map<string, number> {
+  const balances = useLiveQuery(
+    async () => {
+      const [accounts, transactions] = await Promise.all([
+        db.accounts.filter((a) => a.is_active).toArray(),
+        db.transactions.filter((t) => t.is_paid).toArray(),
+      ])
+      const map = new Map<string, number>()
+      for (const acc of accounts) {
+        map.set(acc.id, acc.balance)
+      }
+      for (const tx of transactions) {
+        const current = map.get(tx.account_id) ?? 0
+        if (tx.type === 'income') map.set(tx.account_id, current + tx.amount)
+        else if (tx.type === 'expense') map.set(tx.account_id, current - tx.amount)
+      }
+      return map
+    },
+    []
+  )
+  return balances ?? new Map()
+}
+
+/** Total computed balance across all active accounts (initial + paid tx deltas). */
+export function useTotalComputedBalance(): number {
+  const balances = useAllComputedBalances()
+  let total = 0
+  for (const v of balances.values()) total += v
+  return total
+}
+
 /** Computed balance from transactions: paid only (Saldo atual) and all (Saldo previsto). */
 export function useAccountBalance(accountId: string | null): {
   balancePaid: number
@@ -130,18 +185,9 @@ export function useAccountBalance(accountId: string | null): {
   return { balancePaid, balanceProjected }
 }
 
-/** Total balance (paid only) across all active accounts. */
+/** Total balance (paid only) across all active accounts. @deprecated Prefer useTotalComputedBalance */
 export function useTotalBalance(): number {
-  const accounts = useLiveQuery(() => db.accounts.filter((a) => a.is_active).toArray(), [])
-  const txs = useLiveQuery(() => db.transactions.toArray(), [])
-  const list = accounts ?? []
-  const transactions = txs ?? []
-  return list.reduce((total, acc) => {
-    const paid = transactions
-      .filter((t) => t.account_id === acc.id && t.is_paid)
-      .reduce((s, t) => s + (t.type === 'income' ? t.amount : t.type === 'expense' ? -t.amount : 0), 0)
-    return total + paid
-  }, 0)
+  return useTotalComputedBalance()
 }
 
 /** Create "Saldo inicial" transaction when opening an account with initial balance. */

@@ -64,7 +64,7 @@ export function Sidebar() {
           <button
             type="button"
             onClick={() => setSidebarOpen(false)}
-            className="p-1 rounded hover:bg-surface-700 lg:hidden"
+            className="p-1 rounded hover:bg-surface-700"
             aria-label="Fechar menu"
           >
             <ChevronLeft className="h-5 w-5" />

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
-import { useAccountsWithLoading } from '../../hooks/useAccounts'
+import { useAccountsWithLoading, useTotalComputedBalance } from '../../hooks/useAccounts'
 import { useTransactions } from '../../hooks/useTransactions'
 import { formatCurrencyFromCents, monthRange } from '../../lib/utils'
 import { useAppStore } from '../../store/appStore'
@@ -41,10 +41,7 @@ export function BalanceHeader() {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
-  const totalBalance = useMemo(
-    () => accounts.reduce((sum, a) => sum + a.balance, 0),
-    [accounts]
-  )
+  const totalBalance = useTotalComputedBalance()
   const monthIncome = useMemo(
     () =>
       transactions

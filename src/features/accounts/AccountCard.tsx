@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { Pencil, Archive, Wallet, Landmark, CreditCard, Banknote, TrendingUp, PiggyBank } from 'lucide-react'
 import type { Account } from '../../db'
 import { formatCurrencyFromCents } from '../../lib/utils'
-import { useAccountBalance } from '../../hooks/useAccounts'
+import { useComputedAccountBalance } from '../../hooks/useAccounts'
 import { ACCOUNT_TYPE_LABELS } from './constants'
 import { cn } from '../../lib/utils'
 
@@ -32,7 +32,7 @@ export interface AccountCardProps {
 }
 
 export function AccountCard({ account, onEdit, onArchive }: AccountCardProps) {
-  const { balancePaid } = useAccountBalance(account.id)
+  const computedBalance = useComputedAccountBalance(account.id)
   const typeLabel = ACCOUNT_TYPE_LABELS[account.type]
 
   return (
@@ -78,10 +78,10 @@ export function AccountCard({ account, onEdit, onArchive }: AccountCardProps) {
         <p
           className={cn(
             'mt-3 text-xl font-bold tabular-nums',
-            balancePaid >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
+            computedBalance >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
           )}
         >
-          {formatCurrencyFromCents(balancePaid, account.currency)}
+          {formatCurrencyFromCents(computedBalance, account.currency)}
         </p>
         <Link
           to={`/transactions?account=${account.id}`}
