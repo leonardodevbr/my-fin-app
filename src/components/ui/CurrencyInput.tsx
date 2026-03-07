@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, forwardRef } from 'react'
 import { formatCurrencyFromCents, parseCurrencyToCents } from '../../lib/utils'
 
 const MAX_CENTS = 99999999999 // 999.999.999,99
@@ -13,7 +13,7 @@ export interface CurrencyInputProps {
   disabled?: boolean
 }
 
-export function CurrencyInput({
+export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(function CurrencyInput({
   value,
   onChange,
   placeholder = 'R$ 0,00',
@@ -21,8 +21,16 @@ export function CurrencyInput({
   label,
   error,
   disabled,
-}: CurrencyInputProps) {
+}, ref) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const setRef = useCallback(
+    (el: HTMLInputElement | null) => {
+      inputRef.current = el
+      if (typeof ref === 'function') ref(el)
+      else if (ref) ref.current = el
+    },
+    [ref]
+  )
 
   const displayValue = formatCurrencyFromCents(value)
 
@@ -82,7 +90,7 @@ export function CurrencyInput({
         <label className="block text-sm font-medium text-surface-700 mb-1">{label}</label>
       )}
       <input
-        ref={inputRef}
+        ref={setRef}
         type="text"
         inputMode="decimal"
         autoComplete="off"
@@ -97,4 +105,4 @@ export function CurrencyInput({
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
     </div>
   )
-}
+})

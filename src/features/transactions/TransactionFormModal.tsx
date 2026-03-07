@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -125,6 +125,7 @@ export function TransactionFormModal({
   const [tagInput, setTagInput] = useState('')
   const [editScope, setEditScope] = useState<EditGroupScope>('this_only')
   const [groupInfo, setGroupInfo] = useState<{ name: string; current: number; total: number } | null>(null)
+  const amountInputRef = useRef<HTMLInputElement>(null)
 
   const defaultValues: FormValues = useMemo(
     () => ({
@@ -192,6 +193,13 @@ export function TransactionFormModal({
   useEffect(() => {
     if (open && type) setValue('category_id', '')
   }, [open, type, setValue])
+
+  useEffect(() => {
+    if (open) {
+      const t = setTimeout(() => amountInputRef.current?.focus(), 80)
+      return () => clearTimeout(t)
+    }
+  }, [open])
 
   const accountOptions = useMemo(
     () => accounts.map((a) => ({ value: a.id, label: a.name })),
@@ -419,6 +427,7 @@ export function TransactionFormModal({
           {/* Amount */}
           {payment_mode === 'single' && (
             <CurrencyInput
+              ref={amountInputRef}
               label="Valor"
               value={amount_cents}
               onChange={(c) => setValue('amount_cents', c)}
@@ -428,6 +437,7 @@ export function TransactionFormModal({
           )}
           {payment_mode === 'recurring' && (
             <CurrencyInput
+              ref={amountInputRef}
               label="Valor (por ocorrência)"
               value={amount_cents}
               onChange={(c) => setValue('amount_cents', c)}
@@ -437,6 +447,7 @@ export function TransactionFormModal({
           )}
           {payment_mode === 'installments' && watch('installment_mode') === 'per_parcel' && (
             <CurrencyInput
+              ref={amountInputRef}
               label="Valor da parcela"
               value={watch('amount_per_installment_cents') ?? amount_cents}
               onChange={(c) => {
@@ -449,6 +460,7 @@ export function TransactionFormModal({
           )}
           {payment_mode === 'installments' && watch('installment_mode') === 'total' && (
             <CurrencyInput
+              ref={amountInputRef}
               label="Valor total"
               value={watch('amount_total_cents') ?? 0}
               onChange={(c) => setValue('amount_total_cents', c)}
