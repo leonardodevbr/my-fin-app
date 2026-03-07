@@ -9,6 +9,8 @@ import {
   PiggyBank,
   User,
   LogOut,
+  FileDown,
+  TrendingUp,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useAppStore } from '../../store/appStore'
@@ -21,8 +23,10 @@ const navItems = [
   { to: '/accounts', icon: Wallet, label: 'Contas' },
   { to: '/categories', icon: Tags, label: 'Categorias' },
   { to: '/reports', icon: BarChart3, label: 'Relatórios' },
+  { to: '/projection', icon: TrendingUp, label: 'Projeção' },
   { to: '/budgets', icon: PiggyBank, label: 'Orçamentos' },
   { to: '/profile', icon: User, label: 'Perfil' },
+  { to: '/import', icon: FileDown, label: 'Importar' },
 ]
 
 function isNavActive(pathname: string, to: string): boolean {

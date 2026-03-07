@@ -1,10 +1,8 @@
--- Finapp initial schema
--- PostgreSQL, RLS, user-scoped tables, realtime, indexes, get_changes_since RPC
-
 -- =============================================================================
--- EXTENSIONS (if needed)
+-- Finapp: schema único (tabelas, RLS, realtime, triggers, conta/categorias padrão, storage)
 -- =============================================================================
--- (uuid-ossp or gen_random_uuid is built-in in PG13+)
+-- Ordem de execução: 1) reset.sql  2) esta migration  3) seed.sql
+-- =============================================================================
 
 -- =============================================================================
 -- TABLES
@@ -38,7 +36,6 @@ CREATE TABLE categories (
   synced_at timestamptz
 );
 
--- Parent for installments/recurring/single. Defines rules; transactions reference group_id.
 CREATE TABLE transaction_groups (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -47,14 +44,11 @@ CREATE TABLE transaction_groups (
   account_id uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
   category_id uuid REFERENCES categories(id) ON DELETE SET NULL,
   payment_mode text NOT NULL CHECK (payment_mode IN ('single', 'installments', 'recurring')),
-
   installments_total int,
   amount_total numeric(12,2),
   amount_per_installment numeric(12,2),
-
-  recurrence_period text CHECK (recurrence_period IN ('daily', 'weekly', 'monthly', 'yearly')),
+  recurrence_period text CHECK (recurrence_period IN ('daily', 'weekly', 'biweekly', 'monthly', 'every_2_months', 'every_3_months', 'every_6_months', 'yearly')),
   recurrence_end_date date,
-
   start_date date NOT NULL,
   notes text,
   tags jsonb NOT NULL DEFAULT '[]',
@@ -63,7 +57,6 @@ CREATE TABLE transaction_groups (
   synced_at timestamptz
 );
 
--- Single financial event on a date. group_id null = standalone; non-null = part of a group.
 CREATE TABLE transactions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -96,7 +89,7 @@ CREATE TABLE budgets (
 );
 
 -- =============================================================================
--- INDEXES (updated_at for pull since last_sync)
+-- INDEXES
 -- =============================================================================
 
 CREATE INDEX idx_accounts_user_id_updated_at ON accounts(user_id, updated_at DESC);
@@ -104,14 +97,13 @@ CREATE INDEX idx_categories_user_id_updated_at ON categories(user_id, updated_at
 CREATE INDEX idx_transaction_groups_user_id_updated_at ON transaction_groups(user_id, updated_at DESC);
 CREATE INDEX idx_transactions_user_id_updated_at ON transactions(user_id, updated_at DESC);
 CREATE INDEX idx_budgets_user_id_updated_at ON budgets(user_id, updated_at DESC);
-
 CREATE INDEX idx_transactions_user_id_date_desc ON transactions(user_id, date DESC);
 CREATE INDEX idx_transactions_user_id_account_id ON transactions(user_id, account_id);
 CREATE INDEX idx_transactions_user_id_category_id ON transactions(user_id, category_id);
 CREATE INDEX idx_transactions_group_id ON transactions(group_id);
 
 -- =============================================================================
--- ROW LEVEL SECURITY (RLS)
+-- ROW LEVEL SECURITY
 -- =============================================================================
 
 ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
@@ -120,31 +112,26 @@ ALTER TABLE transaction_groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE budgets ENABLE ROW LEVEL SECURITY;
 
--- accounts
 CREATE POLICY accounts_select ON accounts FOR SELECT USING (user_id = auth.uid());
 CREATE POLICY accounts_insert ON accounts FOR INSERT WITH CHECK (user_id = auth.uid());
 CREATE POLICY accounts_update ON accounts FOR UPDATE USING (user_id = auth.uid());
 CREATE POLICY accounts_delete ON accounts FOR DELETE USING (user_id = auth.uid());
 
--- categories
 CREATE POLICY categories_select ON categories FOR SELECT USING (user_id = auth.uid());
 CREATE POLICY categories_insert ON categories FOR INSERT WITH CHECK (user_id = auth.uid());
 CREATE POLICY categories_update ON categories FOR UPDATE USING (user_id = auth.uid());
 CREATE POLICY categories_delete ON categories FOR DELETE USING (user_id = auth.uid());
 
--- transaction_groups
 CREATE POLICY transaction_groups_select ON transaction_groups FOR SELECT USING (user_id = auth.uid());
 CREATE POLICY transaction_groups_insert ON transaction_groups FOR INSERT WITH CHECK (user_id = auth.uid());
 CREATE POLICY transaction_groups_update ON transaction_groups FOR UPDATE USING (user_id = auth.uid());
 CREATE POLICY transaction_groups_delete ON transaction_groups FOR DELETE USING (user_id = auth.uid());
 
--- transactions
 CREATE POLICY transactions_select ON transactions FOR SELECT USING (user_id = auth.uid());
 CREATE POLICY transactions_insert ON transactions FOR INSERT WITH CHECK (user_id = auth.uid());
 CREATE POLICY transactions_update ON transactions FOR UPDATE USING (user_id = auth.uid());
 CREATE POLICY transactions_delete ON transactions FOR DELETE USING (user_id = auth.uid());
 
--- budgets
 CREATE POLICY budgets_select ON budgets FOR SELECT USING (user_id = auth.uid());
 CREATE POLICY budgets_insert ON budgets FOR INSERT WITH CHECK (user_id = auth.uid());
 CREATE POLICY budgets_update ON budgets FOR UPDATE USING (user_id = auth.uid());
@@ -160,7 +147,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transaction_groups;
 ALTER PUBLICATION supabase_realtime ADD TABLE transactions;
 
 -- =============================================================================
--- RPC: get_changes_since (SECURITY DEFINER, whitelist table name)
+-- RPC
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION get_changes_since(p_table text, p_since timestamptz)
@@ -182,7 +169,7 @@ END;
 $$;
 
 -- =============================================================================
--- TRIGGER: updated_at
+-- TRIGGERS updated_at
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION set_updated_at()
@@ -202,7 +189,7 @@ CREATE TRIGGER transactions_updated_at BEFORE UPDATE ON transactions FOR EACH RO
 CREATE TRIGGER budgets_updated_at BEFORE UPDATE ON budgets FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- =============================================================================
--- DEFAULT CATEGORIES FOR NEW USERS (trigger on signup)
+-- FUNÇÕES: categorias e conta padrão para novos usuários
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION create_default_categories_for_user(p_user_id uuid)
@@ -229,6 +216,18 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION create_default_account_for_user(p_user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO accounts (user_id, name, type, balance, color, icon, currency, is_active, created_at, updated_at)
+  VALUES (p_user_id, 'Carteira', 'cash', 0, '#10b981', 'wallet', 'BRL', true, now(), now());
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -237,6 +236,7 @@ SET search_path = public
 AS $$
 BEGIN
   PERFORM create_default_categories_for_user(NEW.id);
+  PERFORM create_default_account_for_user(NEW.id);
   RETURN NEW;
 END;
 $$;
@@ -244,3 +244,43 @@ $$;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- =============================================================================
+-- STORAGE: bucket avatars (fotos de perfil)
+-- =============================================================================
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'avatars',
+  'avatars',
+  true,
+  5242880,
+  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = EXCLUDED.public,
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+CREATE POLICY "Users can upload own avatar"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'avatars'
+  AND (storage.foldername(name))[1] = auth.uid()::text
+);
+
+CREATE POLICY "Users can update own avatar"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Users can delete own avatar"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Avatars are public"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'avatars');

@@ -35,6 +35,7 @@ export class FinAppDB extends Dexie {
 export const db = new FinAppDB()
 export type {
   Account,
+  AccountType,
   Budget,
   Category,
   SyncQueueItem,

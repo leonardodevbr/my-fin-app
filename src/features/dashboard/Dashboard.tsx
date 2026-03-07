@@ -6,6 +6,7 @@ import { AccountCards } from './AccountCards'
 import { RecentTransactions } from './RecentTransactions'
 import { BudgetProgress } from './BudgetProgress'
 import { UpcomingBills } from './UpcomingBills'
+import { QuickProjectionCard } from './QuickProjectionCard'
 
 export function Dashboard() {
   const selectedMonth = useAppStore((s) => s.selectedMonth)
@@ -20,6 +21,7 @@ export function Dashboard() {
         <div className="space-y-6">
           <BalanceHeader />
           <MonthlySummaryBar />
+          <QuickProjectionCard />
           <section>
             <h2 className="mb-3 text-lg font-semibold text-surface-900">Contas</h2>
             <AccountCards />

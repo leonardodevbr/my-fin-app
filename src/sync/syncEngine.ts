@@ -148,6 +148,8 @@ export async function syncAll(): Promise<void> {
   if (!isSupabaseConfigured) return
   const since = getLastSync()
   await pullChanges(since)
+  const { scheduleRecurringTransactions } = await import('./recurringScheduler')
+  await scheduleRecurringTransactions()
   await pushChanges()
 }
 

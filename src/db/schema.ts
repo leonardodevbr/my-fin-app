@@ -11,7 +11,15 @@ export type AccountType = 'checking' | 'savings' | 'credit' | 'cash' | 'investme
 export type CategoryType = 'income' | 'expense'
 export type TransactionType = 'income' | 'expense' | 'transfer'
 export type PaymentMode = 'single' | 'installments' | 'recurring'
-export type RecurrencePeriod = 'daily' | 'weekly' | 'monthly' | 'yearly'
+export type RecurrencePeriod =
+  | 'daily'
+  | 'weekly'
+  | 'biweekly'
+  | 'monthly'
+  | 'every_2_months'
+  | 'every_3_months'
+  | 'every_6_months'
+  | 'yearly'
 export type SyncOperation = 'insert' | 'update' | 'delete'
 
 export interface Account {
@@ -112,7 +120,7 @@ export interface SyncQueueItem {
 }
 
 export const DB_NAME = 'MyFinAppDB'
-export const DB_VERSION = 2
+export const DB_VERSION = 3
 
 export const SCHEMA = {
   accounts: 'id, name, type, balance, color, icon, currency, is_active, created_at, updated_at, synced_at',
@@ -120,7 +128,7 @@ export const SCHEMA = {
   transaction_groups:
     'id, user_id, name, type, account_id, category_id, payment_mode, installments_total, amount_total, amount_per_installment, recurrence_period, recurrence_end_date, start_date, notes, tags, created_at, updated_at, synced_at',
   transactions:
-    'id, group_id, account_id, category_id, type, amount, description, date, paid_at, is_paid, installment_number, notes, tags, created_at, updated_at, synced_at',
+    'id, group_id, account_id, category_id, type, amount, description, date, paid_at, is_paid, installment_number, notes, tags, created_at, updated_at, synced_at, [group_id+date]',
   budgets: 'id, category_id, amount, month, created_at, updated_at, synced_at',
   sync_queue: 'id, table_name, record_id, operation, payload, created_at, attempts',
 }

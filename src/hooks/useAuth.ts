@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase'
+import { db } from '../db'
+import { clearLastSync, syncAll } from '../sync/syncEngine'
 
 export interface AuthState {
   user: User | null
@@ -8,6 +10,11 @@ export interface AuthState {
   loading: boolean
   /** true quando o usuário voltou pelo link de redefinir senha e precisa definir uma nova */
   needsNewPassword: boolean
+  isAuthenticated: boolean
+  isLoading: boolean
+  login: (email: string, password: string) => Promise<{ error: Error | null }>
+  register: (email: string, password: string, name: string) => Promise<{ error: Error | null }>
+  logout: () => Promise<void>
   signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>
   signInWithOtp: (email: string) => Promise<{ error: Error | null }>
   resetPasswordForEmail: (email: string) => Promise<{ error: Error | null }>
@@ -60,7 +67,37 @@ export function useAuth(): AuthState {
     const supabase = getSupabase()
     if (!supabase) return { error: new Error('Supabase não configurado') }
     const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (!error) void syncAll()
     return { error: error ?? null }
+  }
+
+  const login = signInWithPassword
+
+  const register = async (
+    email: string,
+    password: string,
+    name: string
+  ): Promise<{ error: Error | null }> => {
+    const supabase = getSupabase()
+    if (!supabase) return { error: new Error('Supabase não configurado') }
+    const { error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: { data: { full_name: name.trim() || undefined } },
+    })
+    return { error: error ?? null }
+  }
+
+  const logout = async (): Promise<void> => {
+    const supabase = getSupabase()
+    if (supabase) await supabase.auth.signOut()
+    await db.accounts.clear()
+    await db.categories.clear()
+    await db.transaction_groups.clear()
+    await db.transactions.clear()
+    await db.budgets.clear()
+    await db.sync_queue.clear()
+    clearLastSync()
   }
 
   const signInWithOtp = async (email: string): Promise<{ error: Error | null }> => {
@@ -103,15 +140,19 @@ export function useAuth(): AuthState {
   }
 
   const signOut = async (): Promise<void> => {
-    const supabase = getSupabase()
-    if (supabase) await supabase.auth.signOut()
+    await logout()
   }
 
   return {
     user: session?.user ?? null,
     session,
     loading,
+    isLoading: loading,
+    isAuthenticated: Boolean(session?.user),
     needsNewPassword,
+    login,
+    register,
+    logout,
     signInWithPassword,
     signInWithOtp,
     resetPasswordForEmail,

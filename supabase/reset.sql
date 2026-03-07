@@ -1,24 +1,31 @@
 -- =============================================================================
--- APAGAR TUDO do Finapp (tabelas, triggers, funções)
+-- RESET: apaga tudo do Finapp (storage, trigger auth, funções, tabelas)
 -- =============================================================================
--- Rode este arquivo no SQL Editor do Supabase quando quiser zerar e recomeçar.
--- Depois rode na ordem: 001_initial_schema.sql → 002_default_account.sql → seed.sql
+-- Ordem de execução: 1) este reset  2) migration (001_initial_schema.sql)  3) seed.sql
+-- Rode no SQL Editor do Supabase quando quiser zerar e recomeçar.
 -- =============================================================================
 
--- 1. Trigger em auth.users (tem que ser primeiro)
+-- 1. Storage: políticas do bucket avatars (Supabase não permite DELETE direto em storage.buckets)
+DROP POLICY IF EXISTS "Users can upload own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Avatars are public" ON storage.objects;
+
+-- 2. Trigger em auth.users
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 
--- 2. Funções usadas pelo trigger
+-- 3. Funções (trigger e helpers)
 DROP FUNCTION IF EXISTS handle_new_user();
 DROP FUNCTION IF EXISTS create_default_account_for_user(uuid);
 DROP FUNCTION IF EXISTS create_default_categories_for_user(uuid);
 
--- 3. Tabelas (a ordem importa por causa das chaves estrangeiras)
+-- 4. Tabelas (ordem por FKs: budgets → transactions → transaction_groups → categories → accounts)
 DROP TABLE IF EXISTS budgets CASCADE;
 DROP TABLE IF EXISTS transactions CASCADE;
+DROP TABLE IF EXISTS transaction_groups CASCADE;
 DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS accounts CASCADE;
 
--- 4. Funções que sobraram (triggers de updated_at e RPC)
+-- 5. Funções restantes (updated_at e RPC)
 DROP FUNCTION IF EXISTS set_updated_at();
 DROP FUNCTION IF EXISTS get_changes_since(text, timestamptz);

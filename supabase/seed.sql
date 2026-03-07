@@ -10,7 +10,7 @@
 -- Transações e orçamentos NÃO são inseridos aqui (são criados pelo app).
 --
 -- Como rodar no Supabase Cloud:
---   1. Rode antes as migrations (incluindo 002_default_account.sql).
+--   1. Rode antes: reset.sql (se quiser zerar) e depois a migration 001_initial_schema.sql.
 --   2. Authentication → certifique-se de ter pelo menos um usuário.
 --   3. SQL Editor → New query → cole todo este arquivo → Run.
 --   4. Confira em Table Editor: categories (12 linhas/usuário), accounts (1 linha/usuário).

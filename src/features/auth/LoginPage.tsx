@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Wallet, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../hooks/useAuth'
 
 export function LoginPage() {
+  const navigate = useNavigate()
   const { signInWithPassword, signInWithOtp, resetPasswordForEmail } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [resetSent, setResetSent] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -28,22 +31,23 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setFormError(null)
     if (!email.trim()) {
-      toast.error('Informe o email')
+      setFormError('Informe o email')
       return
     }
     if (!password.trim()) {
-      toast.error('Informe a senha')
+      setFormError('Informe a senha')
       return
     }
     setLoading(true)
     const { error } = await signInWithPassword(email.trim(), password)
     setLoading(false)
     if (error) {
-      toast.error(error.message === 'Invalid login credentials' ? 'Email ou senha incorretos.' : error.message)
+      setFormError(error.message === 'Invalid login credentials' ? 'Email ou senha incorretos.' : error.message)
       return
     }
-    toast.success('Entrando…')
+    navigate('/')
   }
 
   const handleMagicLink = async (e: React.FormEvent) => {
@@ -192,6 +196,11 @@ export function LoginPage() {
                 </button>
               </div>
             </div>
+            {formError && (
+              <p className="text-sm text-red-600" role="alert">
+                {formError}
+              </p>
+            )}
             <button
               type="submit"
               disabled={loading}
@@ -199,6 +208,12 @@ export function LoginPage() {
             >
               {loading ? 'Entrando…' : 'Entrar'}
             </button>
+            <p className="text-center text-sm text-surface-600">
+              Não tem conta?{' '}
+              <Link to="/register" className="text-primary-600 hover:text-primary-700 hover:underline">
+                Criar conta
+              </Link>
+            </p>
             <button
               type="button"
               onClick={handleMagicLink}
