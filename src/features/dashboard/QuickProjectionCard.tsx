@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { addMonths } from 'date-fns'
+import { db } from '../../db'
 import { computeProjection } from '../projection/projectionEngine'
 import { formatCurrencyFromCents } from '../../lib/utils'
 import { toISODate } from '../../lib/utils'
 
 export function QuickProjectionCard() {
   const [balances, setBalances] = useState<{ month: string; label: string; balance: number }[] | null>(null)
+  const txCount = useLiveQuery(() => db.transactions.count(), []) ?? 0
 
   useEffect(() => {
     const today = new Date()
@@ -25,7 +28,7 @@ export function QuickProjectionCard() {
         setBalances(next3)
       })
       .catch(() => setBalances(null))
-  }, [])
+  }, [txCount])
 
   return (
     <section className="min-w-0 rounded-xl border border-surface-200 bg-white p-4">

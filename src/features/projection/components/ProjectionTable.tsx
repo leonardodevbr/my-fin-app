@@ -93,37 +93,24 @@ export const ProjectionTable = React.memo(function ProjectionTable({
                       )}
                     </button>
                   </td>
-                  <td colSpan={2} className="px-3 py-2 font-medium text-surface-900 capitalize">
+                  <td colSpan={3} className="px-3 py-2 font-semibold text-surface-900 capitalize">
                     {monthLabel}
                   </td>
-                  <td className="px-3 py-2" />
-                  <td className="px-3 py-2">
-                    {monthEntry && (
-                      <span className="text-green-600">
-                        +{formatCurrencyFromCents(monthEntry.income)}
-                      </span>
-                    )}
+                  <td className="px-3 py-2 text-green-600 font-medium">
+                    {monthEntry ? `+${formatCurrencyFromCents(monthEntry.income)}` : '—'}
                   </td>
-                  <td className="px-3 py-2">
-                    {monthEntry && (
-                      <span className="text-red-600">
-                        -{formatCurrencyFromCents(monthEntry.expenses)}
-                      </span>
-                    )}
+                  <td className="px-3 py-2 text-red-600 font-medium">
+                    {monthEntry ? `-${formatCurrencyFromCents(monthEntry.expenses)}` : '—'}
                   </td>
-                  <td className="px-3 py-2 text-right">
-                    {monthEntry && (
-                      <span
-                        className={cn(
-                          'font-medium',
-                          monthEntry.closing_balance < 0
-                            ? 'text-red-600'
-                            : 'text-surface-900'
-                        )}
-                      >
-                        {formatCurrencyFromCents(monthEntry.closing_balance)}
-                      </span>
+                  <td
+                    className={cn(
+                      'px-3 py-2 text-right font-semibold',
+                      monthEntry && monthEntry.closing_balance < 0
+                        ? 'text-red-600'
+                        : 'text-emerald-600'
                     )}
+                  >
+                    {monthEntry ? formatCurrencyFromCents(monthEntry.closing_balance) : '—'}
                   </td>
                   <td className="px-3 py-2" />
                 </tr>

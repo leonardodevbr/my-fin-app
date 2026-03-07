@@ -179,7 +179,19 @@ export async function computeProjection(
 
   const accounts = await db.accounts.toArray()
   const filteredAccounts = accounts.filter((a) => accountSet.has(a.id))
-  const startingBalance = filteredAccounts.reduce((sum, a) => sum + a.balance, 0)
+
+  const allPaidTxs = await db.transactions
+    .filter((t) => t.is_paid && accountSet.has(t.account_id))
+    .toArray()
+  const startingBalance = filteredAccounts.reduce((sum, account) => {
+    const paid = allPaidTxs.filter((t) => t.account_id === account.id)
+    const delta = paid.reduce((d, t) => {
+      if (t.type === 'income') return d + t.amount
+      if (t.type === 'expense') return d - t.amount
+      return d
+    }, 0)
+    return sum + account.balance + delta
+  }, 0)
 
   const unpaidFromToday = await db.transactions
     .where('date')

@@ -7,10 +7,19 @@ import {
   TrendingUp,
   PiggyBank,
 } from 'lucide-react'
-import { useAccountsWithLoading } from '../../hooks/useAccounts'
+import { useAccountsWithLoading, useComputedAccountBalance } from '../../hooks/useAccounts'
 import { formatCurrencyFromCents } from '../../lib/utils'
 import { Skeleton } from '../../components/ui/Skeleton'
 import type { Account } from '../../db'
+
+function AccountBalanceBadge({ account }: { account: Account }) {
+  const balance = useComputedAccountBalance(account.id)
+  return (
+    <p className="shrink-0 font-semibold text-surface-900">
+      {formatCurrencyFromCents(balance, account.currency)}
+    </p>
+  )
+}
 
 const ACCOUNT_ICONS: Record<Account['type'], React.ComponentType<{ className?: string }>> = {
   checking: Landmark,
@@ -56,9 +65,7 @@ export function AccountCards() {
                 {account.type}
               </p>
             </div>
-            <p className="shrink-0 font-semibold text-surface-900">
-              {formatCurrencyFromCents(account.balance, account.currency)}
-            </p>
+            <AccountBalanceBadge account={account} />
           </button>
         )
       })}

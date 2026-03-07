@@ -1,5 +1,6 @@
 -- =============================================================================
 -- Finapp: schema único (tabelas, RLS, realtime, triggers, conta/categorias padrão, storage)
+-- VERSÃO CORRIGIDA: campos monetários como int8 (centavos inteiros)
 -- =============================================================================
 -- Ordem de execução: 1) reset.sql  2) esta migration  3) seed.sql
 -- =============================================================================
@@ -13,7 +14,8 @@ CREATE TABLE accounts (
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL,
   type text NOT NULL,
-  balance numeric NOT NULL DEFAULT 0,
+  -- Saldo inicial em centavos inteiros. Ex: R$ 1.000,00 = 100000
+  balance int8 NOT NULL DEFAULT 0,
   color text NOT NULL DEFAULT '#10b981',
   icon text NOT NULL DEFAULT 'wallet',
   currency text NOT NULL DEFAULT 'BRL',
@@ -44,9 +46,10 @@ CREATE TABLE transaction_groups (
   account_id uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
   category_id uuid REFERENCES categories(id) ON DELETE SET NULL,
   payment_mode text NOT NULL CHECK (payment_mode IN ('single', 'installments', 'recurring')),
-  installments_total int,
-  amount_total numeric(12,2),
-  amount_per_installment numeric(12,2),
+  installments_total int4,
+  -- Valores em centavos inteiros. Ex: R$ 1.150,00 = 115000
+  amount_total int8,
+  amount_per_installment int8,
   recurrence_period text CHECK (recurrence_period IN ('daily', 'weekly', 'biweekly', 'monthly', 'every_2_months', 'every_3_months', 'every_6_months', 'yearly')),
   recurrence_end_date date,
   start_date date NOT NULL,
@@ -64,12 +67,13 @@ CREATE TABLE transactions (
   account_id uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
   category_id uuid REFERENCES categories(id) ON DELETE SET NULL,
   type text NOT NULL CHECK (type IN ('income', 'expense', 'transfer')),
-  amount numeric(12,2) NOT NULL,
+  -- Valor em centavos inteiros. Ex: R$ 54,00 = 5400
+  amount int8 NOT NULL,
   description text NOT NULL,
   date date NOT NULL,
   paid_at timestamptz,
   is_paid boolean NOT NULL DEFAULT false,
-  installment_number int,
+  installment_number int4,
   notes text,
   tags jsonb NOT NULL DEFAULT '[]',
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -81,7 +85,8 @@ CREATE TABLE budgets (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   category_id uuid NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-  amount numeric(12,2) NOT NULL,
+  -- Limite em centavos inteiros. Ex: R$ 500,00 = 50000
+  amount int8 NOT NULL,
   month varchar(7) NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
@@ -201,18 +206,19 @@ AS $$
 BEGIN
   INSERT INTO categories (id, user_id, name, type, color, icon, parent_id, created_at, updated_at)
   VALUES
-    (gen_random_uuid(), p_user_id, 'Salário', 'income', '#10b981', 'briefcase', NULL, now(), now()),
-    (gen_random_uuid(), p_user_id, 'Freelance', 'income', '#059669', 'laptop', NULL, now(), now()),
-    (gen_random_uuid(), p_user_id, 'Investimentos', 'income', '#047857', 'trending-up', NULL, now(), now()),
-    (gen_random_uuid(), p_user_id, 'Alimentação', 'expense', '#dc2626', 'utensils', NULL, now(), now()),
-    (gen_random_uuid(), p_user_id, 'Transporte', 'expense', '#ea580c', 'car', NULL, now(), now()),
-    (gen_random_uuid(), p_user_id, 'Moradia', 'expense', '#ca8a04', 'home', NULL, now(), now()),
-    (gen_random_uuid(), p_user_id, 'Saúde', 'expense', '#2563eb', 'heart', NULL, now(), now()),
-    (gen_random_uuid(), p_user_id, 'Educação', 'expense', '#7c3aed', 'book-open', NULL, now(), now()),
-    (gen_random_uuid(), p_user_id, 'Lazer', 'expense', '#db2777', 'smile', NULL, now(), now()),
-    (gen_random_uuid(), p_user_id, 'Vestuário', 'expense', '#0d9488', 'shirt', NULL, now(), now()),
-    (gen_random_uuid(), p_user_id, 'Serviços', 'expense', '#4f46e5', 'settings', NULL, now(), now()),
-    (gen_random_uuid(), p_user_id, 'Outros', 'expense', '#64748b', 'circle', NULL, now(), now());
+    (gen_random_uuid(), p_user_id, 'Salário',      'income',  '#10b981', 'briefcase',  NULL, now(), now()),
+    (gen_random_uuid(), p_user_id, 'Freelance',    'income',  '#059669', 'laptop',     NULL, now(), now()),
+    (gen_random_uuid(), p_user_id, 'Investimentos','income',  '#047857', 'trending-up',NULL, now(), now()),
+    (gen_random_uuid(), p_user_id, 'Outros',       'income',  '#64748b', 'circle',     NULL, now(), now()),
+    (gen_random_uuid(), p_user_id, 'Alimentação',  'expense', '#dc2626', 'utensils',   NULL, now(), now()),
+    (gen_random_uuid(), p_user_id, 'Transporte',   'expense', '#ea580c', 'car',        NULL, now(), now()),
+    (gen_random_uuid(), p_user_id, 'Moradia',      'expense', '#ca8a04', 'home',       NULL, now(), now()),
+    (gen_random_uuid(), p_user_id, 'Saúde',        'expense', '#2563eb', 'heart',      NULL, now(), now()),
+    (gen_random_uuid(), p_user_id, 'Educação',     'expense', '#7c3aed', 'book-open',  NULL, now(), now()),
+    (gen_random_uuid(), p_user_id, 'Lazer',        'expense', '#db2777', 'smile',      NULL, now(), now()),
+    (gen_random_uuid(), p_user_id, 'Vestuário',    'expense', '#0d9488', 'shirt',      NULL, now(), now()),
+    (gen_random_uuid(), p_user_id, 'Serviços',     'expense', '#4f46e5', 'settings',   NULL, now(), now()),
+    (gen_random_uuid(), p_user_id, 'Outros',       'expense', '#64748b', 'circle',     NULL, now(), now());
 END;
 $$;
 

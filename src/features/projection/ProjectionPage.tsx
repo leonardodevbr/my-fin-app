@@ -9,7 +9,33 @@ import { ProjectionFilters } from './components/ProjectionFilters'
 import { BalanceAlertBanner } from './components/BalanceAlertBanner'
 import { ProjectionChart } from './components/ProjectionChart'
 import { ProjectionTable } from './components/ProjectionTable'
-import { toISODate, formatCurrencyFromCents } from '../../lib/utils'
+import { toISODate, formatCurrencyFromCents, formatDate } from '../../lib/utils'
+
+interface SummaryCardProps {
+  label: string
+  value: number
+  subtitle?: string
+  unit?: string
+  color: 'positive' | 'negative' | 'warning' | 'neutral'
+}
+
+function SummaryCard({ label, value, subtitle, unit, color }: SummaryCardProps) {
+  const colorMap = {
+    positive: 'text-emerald-600',
+    negative: 'text-red-600',
+    warning: 'text-amber-600',
+    neutral: 'text-surface-900',
+  }
+  return (
+    <div className="rounded-xl border border-surface-200 bg-white p-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{label}</p>
+      <p className={`mt-1 text-xl font-bold tabular-nums ${colorMap[color]}`}>
+        {unit ? `${value} ${unit}` : formatCurrencyFromCents(value)}
+      </p>
+      {subtitle && <p className="mt-0.5 text-xs text-surface-500">{subtitle}</p>}
+    </div>
+  )
+}
 
 function getDateRange(preset: PeriodPreset): { from: string; to: string } {
   const today = new Date()
@@ -162,6 +188,31 @@ export function ProjectionPage() {
 
       {result && !loading && (
         <>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <SummaryCard
+              label="Saldo hoje"
+              value={result.metadata.startingBalance}
+              color="neutral"
+            />
+            <SummaryCard
+              label="Saldo final projetado"
+              value={result.monthlyEntries[result.monthlyEntries.length - 1]?.closing_balance ?? 0}
+              color={result.monthlyEntries[result.monthlyEntries.length - 1]?.closing_balance >= 0 ? 'positive' : 'negative'}
+            />
+            <SummaryCard
+              label="Menor saldo previsto"
+              value={result.metadata.lowestBalance.amount}
+              subtitle={formatDate(result.metadata.lowestBalance.date)}
+              color={result.metadata.lowestBalance.amount < 0 ? 'negative' : 'warning'}
+            />
+            <SummaryCard
+              label="Meses negativos"
+              value={result.metadata.monthsNegative.length}
+              unit="meses"
+              color={result.metadata.monthsNegative.length > 0 ? 'negative' : 'positive'}
+            />
+          </div>
+
           {result.alerts.length > 0 && (
             <BalanceAlertBanner alerts={result.alerts} />
           )}

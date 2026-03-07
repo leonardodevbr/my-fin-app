@@ -33,10 +33,15 @@ export function ImportWizard() {
   )
 
   const firstAccountId = accountOptions[0]?.id ?? ''
+  const hasSingleAccount = accountOptions.length === 1
   const effectiveAccountId = defaultAccountId || firstAccountId
+
+  // Se tiver apenas 1 conta, pré-seleciona ela (raramente será alterada)
   useEffect(() => {
-    if (!defaultAccountId && firstAccountId) setDefaultAccountId(firstAccountId)
-  }, [firstAccountId, defaultAccountId])
+    if (hasSingleAccount && firstAccountId && defaultAccountId !== firstAccountId) {
+      setDefaultAccountId(firstAccountId)
+    }
+  }, [hasSingleAccount, firstAccountId, defaultAccountId])
 
   const newCategoryNames = useMemo(() => {
     const names: string[] = []

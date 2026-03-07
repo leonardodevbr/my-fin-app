@@ -191,6 +191,12 @@ export function TransactionFormModal({
   }, [open, transaction?.id, transaction?.group_id, transaction?.description, transaction?.installment_number])
 
   useEffect(() => {
+    if (open && !transaction && accounts.length === 1) {
+      setValue('account_id', accounts[0].id)
+    }
+  }, [open, transaction, accounts, setValue])
+
+  useEffect(() => {
     if (open && type) setValue('category_id', '')
   }, [open, type, setValue])
 
