@@ -73,20 +73,20 @@ export function ImportWizard() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center gap-0">
         {STEPS.map((s, i) => (
           <div
             key={s}
-            className={`flex items-center gap-1 ${i <= stepIndex ? 'text-primary-600' : 'text-surface-400'}`}
+            className={`flex flex-1 items-center justify-center gap-0 ${i <= stepIndex ? 'text-primary-600' : 'text-surface-400'}`}
           >
             <span
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+              className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-sm font-medium ${
                 i < stepIndex ? 'bg-primary-100' : i === stepIndex ? 'bg-primary-600 text-white' : 'bg-surface-100'
               }`}
             >
               {i + 1}
             </span>
-            {i < STEPS.length - 1 && <span className="w-6 h-0.5 bg-surface-200" />}
+            {i < STEPS.length - 1 && <span className="flex-1 mx-0.5 h-0.5 min-w-2 bg-surface-200" />}
           </div>
         ))}
       </div>

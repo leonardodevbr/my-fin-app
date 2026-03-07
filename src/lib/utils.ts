@@ -67,6 +67,23 @@ export function addMonthToKey(monthKey: string, delta: number): string {
   return format(next, 'yyyy-MM')
 }
 
+/** Retorna texto de diferença relativa em pt-BR: "Há X seg", "Há X min", "Há X h", "Há X dias" */
+export function formatRelativeTime(iso: string | null): string {
+  if (!iso || !iso.trim()) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const now = Date.now()
+  const diffMs = now - date.getTime()
+  const diffSec = Math.floor(diffMs / 1000)
+  const diffMin = Math.floor(diffSec / 60)
+  const diffH = Math.floor(diffMin / 60)
+  const diffDays = Math.floor(diffH / 24)
+  if (diffSec < 60) return `Há ${diffSec} seg`
+  if (diffMin < 60) return `Há ${diffMin} min`
+  if (diffH < 24) return `Há ${diffH} h`
+  return `Há ${diffDays} dias`
+}
+
 export function generateId(): string {
   return crypto.randomUUID()
 }

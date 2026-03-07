@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { formatCurrency } from '../../../lib/utils'
 import type { ParseResult } from '../importParser'
 
@@ -20,6 +20,20 @@ export function StepPreview({
   onSelectedGroupIdsChange,
 }: StepPreviewProps) {
   const [tab, setTab] = useState<Tab>('transactions')
+  const txSelectAllRef = useRef<HTMLInputElement>(null)
+  const groupSelectAllRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const el = txSelectAllRef.current
+    if (!el) return
+    el.indeterminate = selectedTxIds.size > 0 && selectedTxIds.size < result.transactions.length
+  }, [selectedTxIds.size, result.transactions.length])
+
+  useEffect(() => {
+    const el = groupSelectAllRef.current
+    if (!el) return
+    el.indeterminate = selectedGroupIds.size > 0 && selectedGroupIds.size < result.groups.length
+  }, [selectedGroupIds.size, result.groups.length])
 
   const toggleTx = (id: string) => {
     const next = new Set(selectedTxIds)
@@ -40,14 +54,9 @@ export function StepPreview({
   const selectAllGroups = () => onSelectedGroupIdsChange(new Set(result.groups.map((g) => g.id)))
   const deselectAllGroups = () => onSelectedGroupIdsChange(new Set())
 
-  const totalInstallments = result.groups.reduce(
-    (acc, g) => acc + (g.payment_mode === 'single' ? 1 : g.installments_total ?? 1),
-    0
-  )
-
   const tabs: { key: Tab; label: string }[] = [
-    { key: 'transactions', label: 'Transações únicas' },
-    { key: 'groups', label: 'Grupos/Parcelamentos' },
+    { key: 'transactions', label: 'Transações' },
+    { key: 'groups', label: 'Parcelamentos' },
     { key: 'warnings', label: 'Avisos' },
   ]
 
@@ -72,32 +81,24 @@ export function StepPreview({
 
       {tab === 'transactions' && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-surface-600">
-              {result.transactions.length} transações — {selectedTxIds.size} selecionadas
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={selectAllTx}
-                className="text-xs text-primary-600 hover:underline"
-              >
-                Selecionar todas
-              </button>
-              <button
-                type="button"
-                onClick={deselectAllTx}
-                className="text-xs text-surface-500 hover:underline"
-              >
-                Desmarcar
-              </button>
-            </div>
-          </div>
+          <p className="text-sm text-surface-600">
+            {result.transactions.length} transações | {selectedTxIds.size} selecionados |{' '}
+            {selectedTxIds.size} serão gerados
+          </p>
           <div className="border border-surface-200 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-surface-50">
                 <tr>
-                  <th className="w-10 px-2 py-2 text-left" />
+                  <th className="w-10 px-2 py-2 text-left">
+                    <input
+                      ref={txSelectAllRef}
+                      type="checkbox"
+                      checked={selectedTxIds.size === result.transactions.length && result.transactions.length > 0}
+                      onChange={(e) => (e.target.checked ? selectAllTx() : deselectAllTx())}
+                      className="rounded border-surface-300"
+                      aria-label="Selecionar ou desmarcar todas"
+                    />
+                  </th>
                   <th className="px-3 py-2 text-left">Data</th>
                   <th className="px-3 py-2 text-left">Descrição</th>
                   <th className="px-3 py-2 text-right">Valor</th>
@@ -134,32 +135,30 @@ export function StepPreview({
 
       {tab === 'groups' && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-surface-600">
-              {result.groups.length} grupos — {selectedGroupIds.size} selecionados • {totalInstallments} parcelas a gerar
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={selectAllGroups}
-                className="text-xs text-primary-600 hover:underline"
-              >
-                Selecionar todos
-              </button>
-              <button
-                type="button"
-                onClick={deselectAllGroups}
-                className="text-xs text-surface-500 hover:underline"
-              >
-                Desmarcar
-              </button>
-            </div>
-          </div>
+          <p className="text-sm text-surface-600">
+            {result.groups.length} grupos | {selectedGroupIds.size} selecionados |{' '}
+            {result.groups
+              .filter((g) => selectedGroupIds.has(g.id))
+              .reduce(
+                (acc, g) => acc + (g.payment_mode === 'single' ? 1 : g.installments_total ?? 1),
+                0
+              )}{' '}
+            parcelas serão geradas
+          </p>
           <div className="border border-surface-200 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-surface-50">
                 <tr>
-                  <th className="w-10 px-2 py-2 text-left" />
+                  <th className="w-10 px-2 py-2 text-left">
+                    <input
+                      ref={groupSelectAllRef}
+                      type="checkbox"
+                      checked={selectedGroupIds.size === result.groups.length && result.groups.length > 0}
+                      onChange={(e) => (e.target.checked ? selectAllGroups() : deselectAllGroups())}
+                      className="rounded border-surface-300"
+                      aria-label="Selecionar ou desmarcar todos"
+                    />
+                  </th>
                   <th className="px-3 py-2 text-left">Nome</th>
                   <th className="px-3 py-2 text-left">Modo</th>
                   <th className="px-3 py-2 text-right">Total</th>

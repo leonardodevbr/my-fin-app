@@ -1,6 +1,6 @@
-import { type ReactNode, useEffect } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { Menu, RefreshCw } from 'lucide-react'
-import { cn } from '../../lib/utils'
+import { cn, formatRelativeTime } from '../../lib/utils'
 import { Sidebar } from './Sidebar'
 import { BottomNav } from './BottomNav'
 import { useAppStore } from '../../store/appStore'
@@ -14,6 +14,13 @@ export interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const { sidebarOpen, setSidebarOpen } = useAppStore()
   const { syncing, last_synced, error, syncNow } = useSyncStatus()
+  const [relativeTime, setRelativeTime] = useState(() => formatRelativeTime(last_synced))
+
+  useEffect(() => {
+    setRelativeTime(formatRelativeTime(last_synced))
+    const t = setInterval(() => setRelativeTime(formatRelativeTime(last_synced)), 10_000)
+    return () => clearInterval(t)
+  }, [last_synced])
 
   useEffect(() => {
     if (window.innerWidth >= 1024) setSidebarOpen(true)
@@ -47,20 +54,24 @@ export function AppShell({ children }: AppShellProps) {
           </div>
           <div className="flex items-center gap-2 text-surface-500 text-sm">
             {syncing && <span>Sincronizando…</span>}
-            {!syncing && last_synced && <span>Última sync: {new Date(last_synced).toLocaleTimeString('pt-BR')}</span>}
-            {error && <span className="text-red-500" title={error}>Erro</span>}
-            {isSupabaseConfigured && (
-              <button
-                type="button"
-                onClick={() => void syncNow()}
-                disabled={syncing}
-                className="p-1.5 rounded-lg hover:bg-surface-100 text-surface-500 hover:text-surface-700 disabled:opacity-50"
-                title="Sincronizar agora"
-                aria-label="Sincronizar agora"
-              >
-                <RefreshCw className={syncing ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
-              </button>
+            {!syncing && last_synced && (
+              <span className="flex items-center gap-1.5">
+                {relativeTime}
+                {isSupabaseConfigured && (
+                  <button
+                    type="button"
+                    onClick={() => void syncNow()}
+                    disabled={syncing}
+                    className="p-1 rounded-lg hover:bg-surface-100 text-surface-500 hover:text-surface-700 disabled:opacity-50"
+                    title="Sincronizar agora"
+                    aria-label="Sincronizar agora"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </button>
+                )}
+              </span>
             )}
+            {error && <span className="text-red-500" title={error}>Erro</span>}
           </div>
         </header>
         <main className="min-w-0 overflow-x-hidden pb-20 lg:pb-6 px-4 lg:px-6 py-4">
