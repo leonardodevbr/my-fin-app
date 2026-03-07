@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { Listbox } from '@headlessui/react'
 import { ChevronDown, Check } from 'lucide-react'
 import { cn } from '../../lib/utils'
@@ -34,6 +34,7 @@ export function SearchableSelect<T extends string>({
   disabled,
 }: SearchableSelectProps<T>) {
   const [query, setQuery] = useState('')
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   const filtered = useMemo(() => {
     if (!query.trim()) return options
@@ -51,6 +52,10 @@ export function SearchableSelect<T extends string>({
       <Listbox value={value} onChange={onChange} disabled={disabled}>
         <div className="relative">
           <Listbox.Button
+            onClick={() => {
+              setQuery('')
+              setTimeout(() => searchInputRef.current?.focus(), 50)
+            }}
             className={cn(
               'relative w-full cursor-default rounded-lg border bg-white py-2 pl-3 pr-10 text-left text-surface-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50',
               error ? 'border-red-500' : 'border-surface-300'
@@ -76,6 +81,7 @@ export function SearchableSelect<T extends string>({
           <Listbox.Options className="absolute left-0 right-0 top-full z-[100] mt-1 max-h-56 overflow-auto rounded-xl border border-surface-200 bg-white shadow-lg focus:outline-none">
             <div className="sticky top-0 z-10 border-b border-surface-100 bg-white p-2">
               <input
+                ref={searchInputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}

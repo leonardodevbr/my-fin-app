@@ -125,6 +125,7 @@ export function TransactionFormModal({
   const [tagInput, setTagInput] = useState('')
   const [editScope, setEditScope] = useState<EditGroupScope>('this_only')
   const [groupInfo, setGroupInfo] = useState<{ name: string; current: number; total: number } | null>(null)
+  const [showExitConfirm, setShowExitConfirm] = useState(false)
   const amountInputRef = useRef<HTMLInputElement>(null)
 
   const defaultValues: FormValues = useMemo(
@@ -172,6 +173,21 @@ export function TransactionFormModal({
   const type = watch('type')
   const amount_cents = watch('amount_cents')
   const tags = watch('tags')
+  const description = watch('description')
+  const notes = watch('notes')
+
+  const hasFilledData = (): boolean => {
+    if ((description ?? '').trim() !== '') return true
+    if ((amount_cents ?? 0) > 0) return true
+    if ((notes ?? '').trim() !== '') return true
+    if ((tags ?? []).length > 0) return true
+    return false
+  }
+
+  const handleRequestClose = () => {
+    if (hasFilledData()) setShowExitConfirm(true)
+    else onClose()
+  }
 
   useEffect(() => {
     if (!open) return
@@ -347,7 +363,7 @@ export function TransactionFormModal({
         <h2 className="text-lg font-semibold text-surface-900">
           {transaction ? 'Editar transação' : 'Nova transação'}
         </h2>
-        <Button variant="ghost" size="sm" onClick={onClose} aria-label="Fechar">
+        <Button variant="ghost" size="sm" onClick={handleRequestClose} aria-label="Fechar">
           <X className="h-5 w-5" />
         </Button>
       </div>
@@ -396,10 +412,10 @@ export function TransactionFormModal({
             </div>
           )}
 
-          {/* Modo de entrada (primeiro campo, antes do valor) */}
+          {/* Tipo de lançamento (Único, Fixo, Parcelado) */}
           {!transaction?.group_id && (
             <div>
-              <label className="block text-sm font-medium text-surface-700 mb-2">Modo de entrada</label>
+              <label className="block text-sm font-medium text-surface-700 mb-2">Tipo de lançamento</label>
               <div className="grid grid-cols-3 gap-2">
                 {PAYMENT_MODES.map(({ value, label, desc, icon: Icon }) => (
                   <button
@@ -447,7 +463,10 @@ export function TransactionFormModal({
                 <div className="flex rounded-lg bg-surface-100 p-1">
                   <button
                     type="button"
-                    onClick={() => setValue('installment_mode', 'per_parcel')}
+                    onClick={() => {
+                      setValue('installment_mode', 'per_parcel')
+                      setTimeout(() => amountInputRef.current?.focus(), 0)
+                    }}
                     className={cn(
                       'flex-1 py-2 text-sm font-medium rounded-md',
                       watch('installment_mode') === 'per_parcel' ? 'bg-white shadow' : ''
@@ -457,7 +476,10 @@ export function TransactionFormModal({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setValue('installment_mode', 'total')}
+                    onClick={() => {
+                      setValue('installment_mode', 'total')
+                      setTimeout(() => amountInputRef.current?.focus(), 0)
+                    }}
                     className={cn(
                       'flex-1 py-2 text-sm font-medium rounded-md',
                       watch('installment_mode') === 'total' ? 'bg-white shadow' : ''
@@ -593,24 +615,15 @@ export function TransactionFormModal({
                 />
               )}
               <div className="flex flex-wrap gap-2">
-                {RECURRING_EXAMPLES.map((ex) => {
-                  const isSelected = (watch('description') ?? '').trim() === ex
-                  return (
-                    <button
-                      key={ex}
-                      type="button"
-                      onClick={() => setValue('description', ex)}
-                      className={cn(
-                        'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-                        isSelected
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
-                      )}
-                    >
-                      {ex}
-                    </button>
-                  )
-                })}
+                {RECURRING_EXAMPLES.map((ex) => (
+                  <button
+                    key={ex}
+                    type="button"
+                    className="rounded-full bg-surface-100 px-3 py-1 text-sm font-medium text-surface-700 hover:bg-surface-200"
+                  >
+                    {ex}
+                  </button>
+                ))}
               </div>
             </>
           )}
@@ -672,24 +685,15 @@ export function TransactionFormModal({
                 description={watch('description') || 'Parcela'}
               />
               <div className="flex flex-wrap gap-2">
-                {INSTALLMENT_EXAMPLES.map((ex) => {
-                  const isSelected = (watch('description') ?? '').trim() === ex
-                  return (
-                    <button
-                      key={ex}
-                      type="button"
-                      onClick={() => setValue('description', ex)}
-                      className={cn(
-                        'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-                        isSelected
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
-                      )}
-                    >
-                      {ex}
-                    </button>
-                  )
-                })}
+                {INSTALLMENT_EXAMPLES.map((ex) => (
+                  <button
+                    key={ex}
+                    type="button"
+                    className="rounded-full bg-surface-100 px-3 py-1 text-sm font-medium text-surface-700 hover:bg-surface-200"
+                  >
+                    {ex}
+                  </button>
+                ))}
               </div>
             </>
           )}
@@ -795,8 +799,34 @@ export function TransactionFormModal({
 
   return createPortal(
     <>
-      <div className="fixed inset-0 z-40 bg-black/50 md:block" onClick={onClose} aria-hidden />
+      <div className="fixed inset-0 z-40 bg-black/50 md:block" onClick={handleRequestClose} aria-hidden />
       {content}
+      {showExitConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="exit-confirm-title">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-4 space-y-4">
+            <h3 id="exit-confirm-title" className="text-lg font-semibold text-surface-900">
+              Descartar alterações?
+            </h3>
+            <p className="text-sm text-surface-600">
+              Há dados preenchidos. Deseja sair sem salvar?
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={() => setShowExitConfirm(false)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setShowExitConfirm(false)
+                  onClose()
+                }}
+              >
+                Sair
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>,
     document.body
   )
@@ -896,7 +926,12 @@ function InstallmentPreviewList({
       amount: amountPerInstallment + (i < remainder ? 1 : 0),
     })
   }
-  const show = expanded ? items : [...items.slice(0, 3), ...(items.length > 4 ? [null as unknown as { n: number; date: string; amount: number }] : []), ...items.slice(-1)]
+  const show =
+    expanded
+      ? items
+      : items.length <= 3
+        ? items
+        : [...items.slice(0, 3), null as unknown as { n: number; date: string; amount: number }, ...items.slice(-1)]
   return (
     <div className="border border-surface-200 rounded-lg p-3 space-y-1">
       {show.map((item) =>
