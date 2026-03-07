@@ -35,7 +35,7 @@ export function AccountCards() {
   }
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:overflow-visible lg:grid-cols-3">
+    <div className="min-w-0 flex gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:overflow-visible lg:grid-cols-3">
       {accounts.map((account) => {
         const Icon = ACCOUNT_ICONS[account.type] ?? Wallet
         return (

@@ -63,6 +63,8 @@ export function ProfilePage() {
   const [previewFile, setPreviewFile] = useState<File | null>(null)
   const [previewObjectUrl, setPreviewObjectUrl] = useState<string | null>(null)
   const [showCameraView, setShowCameraView] = useState(false)
+  /** 'user' = frontal (selfie), 'environment' = traseira */
+  const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -75,10 +77,12 @@ export function ProfilePage() {
       try {
         try {
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 640 } },
+            video: { facingMode: cameraFacing, width: { ideal: 640 }, height: { ideal: 640 } },
           })
         } catch {
-          stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 640 } } })
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 640 }, height: { ideal: 640 } },
+          })
         }
         streamRef.current = stream
         if (video) {
@@ -96,7 +100,7 @@ export function ProfilePage() {
       streamRef.current = null
       if (video) video.srcObject = null
     }
-  }, [showCameraView])
+  }, [showCameraView, cameraFacing])
 
   if (!user) {
     return (
@@ -278,13 +282,20 @@ export function ProfilePage() {
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 </div>
-                <div className="flex gap-2 justify-center">
+                <div className="flex flex-wrap gap-2 justify-center">
                   <button
                     type="button"
                     onClick={handleCapturePhoto}
                     className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
                   >
                     Capturar foto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCameraFacing((prev) => (prev === 'user' ? 'environment' : 'user'))}
+                    className="rounded-lg border border-surface-300 px-4 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50"
+                  >
+                    {cameraFacing === 'user' ? 'Câmera traseira' : 'Selfie'}
                   </button>
                   <button
                     type="button"
@@ -361,7 +372,10 @@ export function ProfilePage() {
                   <div className="flex flex-wrap gap-2 justify-center">
                     <button
                       type="button"
-                      onClick={() => setShowCameraView(true)}
+                      onClick={() => {
+                        setCameraFacing('user')
+                        setShowCameraView(true)
+                      }}
                       disabled={uploadingAvatar}
                       className="flex items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 disabled:opacity-50"
                     >

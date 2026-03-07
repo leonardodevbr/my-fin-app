@@ -85,26 +85,26 @@ export function BalanceHeader() {
   }
 
   return (
-    <div className="rounded-xl border border-surface-200 bg-white p-6 shadow-sm transition-opacity duration-200">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-surface-500">Saldo total</span>
+    <div className="min-w-0 rounded-xl border border-surface-200 bg-white p-6 shadow-sm transition-opacity duration-200">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium text-surface-500 shrink-0">Saldo total</span>
         <button
           type="button"
           onClick={() => setBalanceVisible((v) => !v)}
-          className="rounded-lg p-1.5 text-surface-500 hover:bg-surface-100 hover:text-surface-700"
+          className="rounded-lg p-1.5 shrink-0 text-surface-500 hover:bg-surface-100 hover:text-surface-700"
           aria-label={balanceVisible ? 'Ocultar valores' : 'Mostrar valores'}
         >
           {balanceVisible ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
         </button>
       </div>
-      <p className="mt-1 text-2xl font-bold text-surface-900 md:text-3xl">
+      <p className="mt-1 min-w-0 truncate text-2xl font-bold text-surface-900 md:text-3xl">
         {masked ? '••••••' : formatCurrencyFromCents(displayBalance)}
       </p>
-      <div className="mt-3 flex flex-wrap gap-4 text-sm">
-        <span className="text-[var(--color-income)]">
+      <div className="mt-3 flex min-w-0 flex-wrap gap-4 text-sm">
+        <span className="min-w-0 truncate text-[var(--color-income)]">
           Receitas: {masked ? '••••' : formatCurrencyFromCents(displayIncome)}
         </span>
-        <span className="text-[var(--color-expense)]">
+        <span className="min-w-0 truncate text-[var(--color-expense)]">
           Despesas: {masked ? '••••' : formatCurrencyFromCents(displayExpense)}
         </span>
       </div>

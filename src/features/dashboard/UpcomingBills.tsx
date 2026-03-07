@@ -61,7 +61,7 @@ export function UpcomingBills() {
   if (list.length === 0) return null
 
   return (
-    <div className="rounded-xl border border-surface-200 bg-white p-4 shadow-sm">
+    <div className="min-w-0 rounded-xl border border-surface-200 bg-white p-4 shadow-sm">
       <h3 className="font-semibold text-surface-900">Contas a pagar (próximos 7 dias)</h3>
       <ul className="mt-3 space-y-2">
         {list.map((t) => {

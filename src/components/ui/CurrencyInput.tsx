@@ -65,6 +65,17 @@ export function CurrencyInput({
     [onChange]
   )
 
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const text = e.target.value
+      const cents = parseCurrencyToCents(text)
+      if (!Number.isNaN(cents) && cents >= 0 && cents <= MAX_CENTS) {
+        onChange(cents)
+      }
+    },
+    [onChange]
+  )
+
   return (
     <div className="w-full">
       {label && (
@@ -73,12 +84,13 @@ export function CurrencyInput({
       <input
         ref={inputRef}
         type="text"
-        inputMode="numeric"
-        readOnly
+        inputMode="decimal"
+        autoComplete="off"
         value={displayValue}
         placeholder={placeholder}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
+        onChange={handleChange}
         disabled={disabled}
         className={`w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-surface-900 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 ${error ? 'border-red-500' : ''} ${className}`}
       />

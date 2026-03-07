@@ -12,22 +12,22 @@ export function Dashboard() {
   const selectedMonth = useAppStore((s) => s.selectedMonth)
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 overflow-x-hidden space-y-6">
       <MonthNavigator />
       <div
         key={selectedMonth}
-        className="grid gap-6 lg:grid-cols-2 animate-[dashboard-fade-in_0.2s_ease-out]"
+        className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2 animate-[dashboard-fade-in_0.2s_ease-out]"
       >
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <BalanceHeader />
           <MonthlySummaryBar />
           <QuickProjectionCard />
-          <section>
+          <section className="min-w-0">
             <h2 className="mb-3 text-lg font-semibold text-surface-900">Contas</h2>
             <AccountCards />
           </section>
         </div>
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <RecentTransactions />
           <BudgetProgress />
           <UpcomingBills />

@@ -17,7 +17,7 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen bg-surface-100">
       <Sidebar />
-      <div className={sidebarOpen ? 'lg:pl-64' : ''}>
+      <div className={`min-w-0 ${sidebarOpen ? 'lg:pl-64' : ''}`}>
         <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-surface-200 bg-white px-4 lg:px-6">
           <button
             type="button"
@@ -48,7 +48,7 @@ export function AppShell({ children }: AppShellProps) {
             )}
           </div>
         </header>
-        <main className="pb-20 lg:pb-6 px-4 lg:px-6 py-4">
+        <main className="min-w-0 overflow-x-hidden pb-20 lg:pb-6 px-4 lg:px-6 py-4">
           {children}
         </main>
       </div>

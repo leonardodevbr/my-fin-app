@@ -55,7 +55,7 @@ export function RecentTransactions() {
   }
 
   return (
-    <div className="rounded-xl border border-surface-200 bg-white p-4 shadow-sm">
+    <div className="min-w-0 rounded-xl border border-surface-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-surface-900">Últimas transações</h3>
         <Link

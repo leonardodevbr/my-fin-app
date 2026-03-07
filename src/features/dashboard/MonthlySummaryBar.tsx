@@ -37,26 +37,27 @@ export function MonthlySummaryBar() {
   }
 
   return (
-    <div className="rounded-xl border border-surface-200 bg-white p-4 shadow-sm">
-      <div className="grid grid-cols-3 gap-4 text-center">
-        <div>
+    <div className="min-w-0 rounded-xl border border-surface-200 bg-white p-4 shadow-sm">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
+        <div className="min-w-0">
           <p className="text-xs font-medium uppercase text-surface-500">Receitas</p>
-          <p className="text-lg font-bold text-[var(--color-income)]">
+          <p className="min-w-0 truncate text-lg font-bold text-[var(--color-income)]" title={formatCurrencyFromCents(income)}>
             {formatCurrencyFromCents(income)}
           </p>
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-medium uppercase text-surface-500">Despesas</p>
-          <p className="text-lg font-bold text-[var(--color-expense)]">
+          <p className="min-w-0 truncate text-lg font-bold text-[var(--color-expense)]" title={formatCurrencyFromCents(expense)}>
             {formatCurrencyFromCents(expense)}
           </p>
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-medium uppercase text-surface-500">Saldo do mês</p>
           <p
-            className={`text-lg font-bold ${
+            className={`min-w-0 truncate text-lg font-bold ${
               balance >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
             }`}
+            title={formatCurrencyFromCents(balance)}
           >
             {formatCurrencyFromCents(balance)}
           </p>
