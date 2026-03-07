@@ -40,9 +40,17 @@ jobs:
         env:
           HOST: ${{ secrets.HOST }}
           USERNAME: ${{ secrets.USERNAME }}
-          SSH_PORT: 22022
+          SSH_PORT: ${{ secrets.SSH_PORT }}
           DEPLOY_DIR: ${{ secrets.DIRECTORY }}
         run: |
+          # Adiciona .htaccess no dist antes de zipar
+          cat > dist/.htaccess << 'HTACCESS'
+          Options -MultiViews
+          RewriteEngine On
+          RewriteCond %{REQUEST_FILENAME} !-f
+          RewriteRule ^ index.html [QSA,L]
+          HTACCESS
+
           # Zipa só o dist/
           cd dist && zip -r ../dist.zip . && cd ..
 
@@ -52,7 +60,6 @@ jobs:
 
           # Extrai no servidor e limpa
           ssh -p $SSH_PORT -o StrictHostKeyChecking=no $USERNAME@$HOST << EOF
-            # Limpa o destino e extrai
             rm -rf $DEPLOY_DIR/*
             unzip -o ~/dist.zip -d $DEPLOY_DIR/
             rm ~/dist.zip
