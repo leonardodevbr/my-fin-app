@@ -12,6 +12,7 @@ import { TransactionFilters, type TransactionFilter } from './TransactionFilters
 import { TransactionList } from './TransactionList'
 import { TransactionFormModal } from './TransactionFormModal'
 import { Button } from '../../components/ui/Button'
+import { cn } from '../../lib/utils'
 import toast from 'react-hot-toast'
 
 function TransactionsMonthNavigator({
@@ -74,6 +75,9 @@ export function TransactionsPage() {
     transaction: Transaction
     hasGroup: boolean
   } | null>(null)
+
+  const defaultTypeForNew: 'income' | 'expense' | 'transfer' =
+    filter === 'income' || filter === 'expense' || filter === 'transfer' ? filter : 'expense'
 
   const [from, to] = monthRange(transactionMonth)
   const rawTransactions = useTransactions({
@@ -173,7 +177,12 @@ export function TransactionsPage() {
         />
         <Button
           onClick={handleNew}
-          className="hidden sm:inline-flex"
+          className={cn(
+            'hidden sm:inline-flex text-white hover:opacity-90',
+            defaultTypeForNew === 'income' && 'bg-[var(--color-income)]',
+            defaultTypeForNew === 'expense' && 'bg-[var(--color-expense)]',
+            defaultTypeForNew === 'transfer' && 'bg-[var(--color-transfer)]'
+          )}
         >
           <Plus className="h-4 w-4 mr-2" />
           Nova transação
@@ -204,14 +213,23 @@ export function TransactionsPage() {
           setEditingTransaction(null)
         }}
         transaction={editingTransaction}
+        defaultType={defaultTypeForNew}
         onSaved={handleSaved}
       />
 
-      {/* FAB mobile */}
+      {/* FAB mobile: cor conforme tipo (despesa=vermelho, receita=verde, transferência=azul) */}
       <button
         type="button"
         onClick={handleNew}
-        className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary-500 text-white shadow-lg sm:hidden hover:bg-primary-600"
+        className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg sm:hidden hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2"
+        style={{
+          backgroundColor:
+            defaultTypeForNew === 'income'
+              ? 'var(--color-income)'
+              : defaultTypeForNew === 'expense'
+                ? 'var(--color-expense)'
+                : 'var(--color-transfer)',
+        }}
         aria-label="Nova transação"
       >
         <Plus className="h-6 w-6" />

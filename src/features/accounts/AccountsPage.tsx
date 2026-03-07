@@ -120,7 +120,7 @@ export function AccountsPage() {
       <button
         type="button"
         onClick={handleNew}
-        className="fixed bottom-20 right-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary-600 text-white shadow-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        className="fixed bottom-20 right-4 flex h-14 w-14 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
         aria-label="Nova conta"
       >
         <Plus className="h-7 w-7" />

@@ -51,9 +51,6 @@ const INSTALLMENT_INTERVAL_OPTIONS = [
   { value: 'yearly', label: 'Anual' },
 ]
 
-const RECURRING_EXAMPLES = ['Salário', 'Aluguel', 'Internet', 'Conta de luz', 'Mensalidade']
-const INSTALLMENT_EXAMPLES = ['Financiamento', 'IPVA', 'Cartão', 'Curso', 'Empréstimo']
-
 const baseSchema = z.object({
   type: z.enum(['income', 'expense', 'transfer']),
   payment_mode: z.enum(['single', 'recurring', 'installments']),
@@ -109,6 +106,8 @@ export interface TransactionFormModalProps {
   open: boolean
   onClose: () => void
   transaction?: Transaction | null
+  /** Tipo inicial ao abrir para nova transação (quando filter na tela é Receitas/Despesas/Transferências). */
+  defaultType?: 'income' | 'expense' | 'transfer'
   onSaved: () => void
 }
 
@@ -116,6 +115,7 @@ export function TransactionFormModal({
   open,
   onClose,
   transaction,
+  defaultType = 'expense',
   onSaved,
 }: TransactionFormModalProps) {
   const { user } = useAuth()
@@ -130,7 +130,7 @@ export function TransactionFormModal({
 
   const defaultValues: FormValues = useMemo(
     () => ({
-      type: transaction?.type ?? 'expense',
+      type: transaction?.type ?? defaultType,
       payment_mode: 'single',
       description: transaction?.description?.replace(/\s*\*\s*$/, '') ?? '',
       account_id: transaction?.account_id ?? '',
@@ -151,7 +151,7 @@ export function TransactionFormModal({
       installments_total: 2,
       installment_interval: 'monthly',
     }),
-    [transaction]
+    [transaction, defaultType]
   )
 
   const {
@@ -212,8 +212,16 @@ export function TransactionFormModal({
     }
   }, [open, transaction, accounts, setValue])
 
+  const prevTypeRef = useRef<string | null>(null)
   useEffect(() => {
-    if (open && type) setValue('category_id', '')
+    if (!open) {
+      prevTypeRef.current = null
+      return
+    }
+    if (prevTypeRef.current !== null && prevTypeRef.current !== type) {
+      setValue('category_id', '')
+    }
+    prevTypeRef.current = type
   }, [open, type, setValue])
 
   useEffect(() => {
@@ -369,6 +377,9 @@ export function TransactionFormModal({
       </div>
       <form
         onSubmit={handleSubmit(onSubmit)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.preventDefault()
+        }}
         className="flex flex-1 flex-col overflow-hidden"
       >
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
@@ -614,17 +625,6 @@ export function TransactionFormModal({
                   endAfter={watch('recurrence_end_after_occurrences') ?? 24}
                 />
               )}
-              <div className="flex flex-wrap gap-2">
-                {RECURRING_EXAMPLES.map((ex) => (
-                  <button
-                    key={ex}
-                    type="button"
-                    className="rounded-full bg-surface-100 px-3 py-1 text-sm font-medium text-surface-700 hover:bg-surface-200"
-                  >
-                    {ex}
-                  </button>
-                ))}
-              </div>
             </>
           )}
 
@@ -684,17 +684,6 @@ export function TransactionFormModal({
                 interval={watch('installment_interval') ?? 'monthly'}
                 description={watch('description') || 'Parcela'}
               />
-              <div className="flex flex-wrap gap-2">
-                {INSTALLMENT_EXAMPLES.map((ex) => (
-                  <button
-                    key={ex}
-                    type="button"
-                    className="rounded-full bg-surface-100 px-3 py-1 text-sm font-medium text-surface-700 hover:bg-surface-200"
-                  >
-                    {ex}
-                  </button>
-                ))}
-              </div>
             </>
           )}
 

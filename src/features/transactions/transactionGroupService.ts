@@ -340,24 +340,36 @@ export async function updateTransactionInGroup(
     toUpdate = [updated]
   } else if (scope === 'this_and_future') {
     const currentNum = tx.installment_number ?? 0
+    const { date: _d, description: _desc, ...restUpdates } = updates
+    const multiUpdates = restUpdates as typeof updates
     toUpdate = allInGroup
       .filter((t) => (t.installment_number ?? 0) >= currentNum)
-      .map((t) => ({
-        ...t,
-        ...updates,
-        paid_at: updates.is_paid !== undefined ? (updates.is_paid ? now : null) : t.paid_at,
-        updated_at: now,
-      }))
+      .map((t) => {
+        const isCurrent = t.id === transactionId
+        const applied = isCurrent ? updates : multiUpdates
+        return {
+          ...t,
+          ...applied,
+          paid_at: applied.is_paid !== undefined ? (applied.is_paid ? now : null) : t.paid_at,
+          updated_at: now,
+        }
+      })
   } else {
-    toUpdate = allInGroup.map((t) => ({
-      ...t,
-      ...updates,
-      paid_at: updates.is_paid !== undefined ? (updates.is_paid ? now : null) : t.paid_at,
-      updated_at: now,
-    }))
+    const { date: _d, description: _desc, ...restUpdates } = updates
+    const multiUpdates = restUpdates as typeof updates
+    toUpdate = allInGroup.map((t) => {
+      const isCurrent = t.id === transactionId
+      const applied = isCurrent ? updates : multiUpdates
+      return {
+        ...t,
+        ...applied,
+        paid_at: applied.is_paid !== undefined ? (applied.is_paid ? now : null) : t.paid_at,
+        updated_at: now,
+      }
+    })
   }
 
-  await db.transaction('rw', [db.transactions, db.sync_queue], async () => {
+  await db.transaction('rw', [db.transactions, db.transaction_groups, db.sync_queue], async () => {
     for (const u of toUpdate) {
       await db.transactions.put(u)
       await db.sync_queue.add({

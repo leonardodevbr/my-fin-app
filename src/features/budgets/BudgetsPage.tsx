@@ -162,7 +162,7 @@ export function BudgetsPage() {
       <button
         type="button"
         onClick={handleNew}
-        className="fixed bottom-20 right-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary-600 text-white shadow-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        className="fixed bottom-20 right-4 flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
         aria-label="Novo orçamento"
       >
         <Plus className="h-7 w-7" />
