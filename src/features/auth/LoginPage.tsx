@@ -98,7 +98,7 @@ export function LoginPage() {
           <div className="rounded-full bg-primary-100 p-3">
             <Wallet className="h-8 w-8 text-primary-600" />
           </div>
-          <h1 className="text-xl font-semibold text-surface-900">My Fin App</h1>
+          <h1 className="text-xl font-semibold text-surface-900">NunFi</h1>
           <p className="text-sm text-surface-500">Entre para sincronizar suas finanças</p>
         </div>
 

@@ -13,6 +13,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { AppLogo } from './AppLogo'
 import { useAppStore } from '../../store/appStore'
 import { useAuth } from '../../hooks/useAuth'
 import { isSupabaseConfigured } from '../../lib/supabase'
@@ -60,7 +61,7 @@ export function Sidebar() {
         )}
       >
         <div className="flex items-center justify-between h-14 px-4 border-b border-surface-700">
-          <span className="font-semibold text-primary-400">My Fin App</span>
+          <AppLogo height={34} light fallbackClassName="font-semibold text-primary-400 text-lg" />
           <button
             type="button"
             onClick={() => setSidebarOpen(false)}

@@ -8,8 +8,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'FinApp',
-        short_name: 'FinApp',
+        name: 'NunFi',
+        short_name: 'NunFi',
         theme_color: '#10b981',
         background_color: '#ffffff',
         display: 'standalone',

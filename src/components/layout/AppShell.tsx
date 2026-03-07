@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useState } from 'react'
 import { Menu, RefreshCw } from 'lucide-react'
 import { cn, formatRelativeTime } from '../../lib/utils'
+import { AppLogo } from './AppLogo'
 import { Sidebar } from './Sidebar'
 import { BottomNav } from './BottomNav'
 import { useAppStore } from '../../store/appStore'
@@ -49,8 +50,8 @@ export function AppShell({ children }: AppShellProps) {
           >
             <Menu className="h-6 w-6 text-surface-600" />
           </button>
-          <div className="flex-1 lg:flex-none">
-            <span className="font-semibold text-surface-900 lg:hidden">My Fin App</span>
+          <div className="flex-1 lg:flex-none flex items-center lg:hidden">
+            <AppLogo height={34} className="max-h-11" />
           </div>
           <div className="flex items-center gap-2 text-surface-500 text-sm">
             {syncing && <span>Sincronizando…</span>}

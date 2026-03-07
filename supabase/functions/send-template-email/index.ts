@@ -7,7 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import * as XLSX from 'https://esm.sh/xlsx@0.18.5'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-const FROM_EMAIL = Deno.env.get('FROM_EMAIL') ?? 'My Fin App <onboarding@resend.dev>'
+const FROM_EMAIL = Deno.env.get('FROM_EMAIL') ?? 'NunFi <onboarding@resend.dev>'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -90,8 +90,8 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         from: FROM_EMAIL,
         to: [user.email],
-        subject: 'Planilha modelo My Fin App',
-        html: '<p>Segue em anexo a planilha modelo para importar transações e grupos no My Fin App.</p><p>Preencha conforme as instruções em cada aba e use a opção Importar planilha no app.</p>',
+        subject: 'Planilha modelo NunFi',
+        html: '<p>Segue em anexo a planilha modelo para importar transações e grupos no NunFi.</p><p>Preencha conforme as instruções em cada aba e use a opção Importar planilha no app.</p>',
         attachments: [
           { filename: 'finapp_import_v3.xlsx', content: base64 },
         ],

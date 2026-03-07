@@ -16,7 +16,7 @@ function OnboardingCard() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
       <div className="text-5xl mb-4">💰</div>
-      <h2 className="text-xl font-bold text-surface-900 mb-2">Bem-vindo ao FinApp!</h2>
+      <h2 className="text-xl font-bold text-surface-900 mb-2">Bem-vindo ao NunFi!</h2>
       <p className="text-surface-500 mb-6 max-w-sm">
         Para começar, crie sua primeira conta bancária ou carteira.
       </p>

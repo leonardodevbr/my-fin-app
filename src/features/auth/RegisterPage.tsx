@@ -54,7 +54,7 @@ export function RegisterPage() {
             <Wallet className="h-8 w-8 text-primary-600" />
           </div>
           <h1 className="text-xl font-semibold text-surface-900">Criar conta</h1>
-          <p className="text-sm text-surface-500">My Fin App</p>
+          <p className="text-sm text-surface-500">NunFi</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
