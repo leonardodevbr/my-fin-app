@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { runImport } from '../importRunner'
 import type { ParseResult } from '../importParser'
-import type { CategoryMapping } from '../importRunner'
+import type { CategoryMapping, AccountMapping } from '../importRunner'
 
 export interface StepConfirmProps {
   result: ParseResult
   selectedTxIds: Set<string>
   selectedGroupIds: Set<string>
   categoryMapping: CategoryMapping
+  accountMapping: AccountMapping
   newCategoryNames: string[]
   defaultAccountId: string
   userId: string
@@ -26,6 +27,7 @@ export function StepConfirm({
   selectedTxIds,
   selectedGroupIds,
   categoryMapping,
+  accountMapping,
   newCategoryNames,
   defaultAccountId,
   userId,
@@ -61,6 +63,7 @@ export function StepConfirm({
         userId,
         defaultAccountId,
         categoryMapping,
+        accountMapping,
         newCategories,
         transactions: selectedTxs,
         groups: selectedGroups,

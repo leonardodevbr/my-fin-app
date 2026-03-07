@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db'
 import { useAuth } from '../../hooks/useAuth'
 import type { ParseResult } from './importParser'
-import type { CategoryMapping } from './importRunner'
+import type { CategoryMapping, AccountMapping } from './importRunner'
 import { StepUpload } from './steps/StepUpload'
 import { StepPreview } from './steps/StepPreview'
 import { StepMapping } from './steps/StepMapping'
@@ -18,6 +18,7 @@ export function ImportWizard() {
   const [selectedTxIds, setSelectedTxIds] = useState<Set<string>>(new Set())
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set())
   const [categoryMapping, setCategoryMapping] = useState<CategoryMapping>({})
+  const [accountMapping, setAccountMapping] = useState<AccountMapping>({})
   const [defaultAccountId, setDefaultAccountId] = useState('')
 
   const categories = useLiveQuery(() => db.categories.toArray(), []) ?? []
@@ -112,7 +113,9 @@ export function ImportWizard() {
           defaultAccountId={effectiveAccountId}
           accountOptions={accountOptions}
           categoryMapping={categoryMapping}
+          accountMapping={accountMapping}
           onCategoryMappingChange={setCategoryMapping}
+          onAccountMappingChange={setAccountMapping}
           onDefaultAccountIdChange={setDefaultAccountId}
         />
       )}
@@ -123,6 +126,7 @@ export function ImportWizard() {
           selectedTxIds={selectedTxIds}
           selectedGroupIds={selectedGroupIds}
           categoryMapping={categoryMapping}
+          accountMapping={accountMapping}
           newCategoryNames={newCategoryNames}
           defaultAccountId={effectiveAccountId}
           userId={user?.id ?? ''}

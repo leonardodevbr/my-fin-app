@@ -15,10 +15,16 @@ export interface CategoryMapping {
   [hint: string]: { type: 'existing'; category_id: string } | { type: 'new'; name: string }
 }
 
+export interface AccountMapping {
+  /** spreadsheet account_name -> Dexie account id */
+  [accountName: string]: string
+}
+
 export interface ImportRunOptions {
   userId: string
   defaultAccountId: string
   categoryMapping: CategoryMapping
+  accountMapping: AccountMapping
   /** New categories to create (name -> type) when user chose "Criar nova categoria" */
   newCategories: { name: string; type: 'income' | 'expense' }[]
   transactions: ParsedStandaloneTransaction[]
@@ -48,10 +54,23 @@ function resolveCategoryId(
   return newCategoryIds.get(m.name) ?? null
 }
 
-/** Generate child transactions for a group (single, installments, or recurring 12 months). */
+function resolveAccountId(
+  accountName: string | null,
+  accountMapping: AccountMapping,
+  defaultAccountId: string
+): string {
+  if (!accountName || !accountName.trim()) return defaultAccountId
+  return accountMapping[accountName.trim()] ?? defaultAccountId
+}
+
+/** Reais -> centavos for DB (schema stores cents). */
+function reaisToCents(reais: number): number {
+  return Math.round(reais * 100)
+}
+
+/** Generate child transactions for a group (single, installments, or recurring 12 months). Group amounts are in cents. */
 function createGroupTransactions(
   group: TransactionGroup,
-  parsed: ParsedTransactionGroup,
   now: string
 ): Transaction[] {
   const records: Transaction[] = []
@@ -62,18 +81,18 @@ function createGroupTransactions(
   const category_id = group.category_id
 
   if (group.payment_mode === 'single') {
-    const is_paid = Boolean(parsed.already_paid_march)
+    const amountCents = group.amount_per_installment ?? group.amount_total ?? 0
     records.push({
       id: generateId(),
       group_id: group.id,
       account_id,
       category_id,
       type,
-      amount: group.amount_per_installment ?? group.amount_total ?? 0,
+      amount: amountCents,
       description: name,
       date: startDate,
-      paid_at: is_paid ? now : null,
-      is_paid,
+      paid_at: null,
+      is_paid: false,
       installment_number: null,
       notes: null,
       tags: [],
@@ -92,7 +111,6 @@ function createGroupTransactions(
     for (let i = 0; i < total; i++) {
       const date = addMonths(new Date(startDate + 'T12:00:00'), i)
       const parcelCents = perInstallment + (i < remainder ? 1 : 0)
-      const isFirstAndPaid = Boolean(i === 0 && parsed.already_paid_march)
       records.push({
         id: generateId(),
         group_id: group.id,
@@ -102,8 +120,8 @@ function createGroupTransactions(
         amount: parcelCents,
         description: `${name} ${i + 1}/${total}`,
         date: toISODate(date),
-        paid_at: isFirstAndPaid ? now : null,
-        is_paid: isFirstAndPaid,
+        paid_at: null,
+        is_paid: false,
         installment_number: i + 1,
         notes: null,
         tags: [],
@@ -115,24 +133,23 @@ function createGroupTransactions(
     return records
   }
 
-  if (group.payment_mode === 'recurring' && group.recurrence_period === 'monthly') {
-    const amount = group.amount_per_installment ?? group.amount_total ?? 0
+  if (group.payment_mode === 'recurring' && (group.recurrence_period === 'monthly' || group.recurrence_period === 'weekly' || group.recurrence_period === 'yearly')) {
+    const amountCents = group.amount_per_installment ?? group.amount_total ?? 0
     const end = addMonths(new Date(startDate + 'T12:00:00'), 12)
     let d = new Date(startDate + 'T12:00:00')
     let n = 0
     while (d <= end) {
-      const isFirstAndPaid = Boolean(n === 0 && parsed.already_paid_march)
       records.push({
         id: generateId(),
         group_id: group.id,
         account_id,
         category_id,
         type,
-        amount,
+        amount: amountCents,
         description: name,
         date: toISODate(d),
-        paid_at: isFirstAndPaid ? now : null,
-        is_paid: isFirstAndPaid,
+        paid_at: null,
+        is_paid: false,
         installment_number: null,
         notes: null,
         tags: [],
@@ -217,17 +234,20 @@ export async function runImport(options: ImportRunOptions): Promise<ImportRunRes
 
       for (const parsed of groups) {
         const category_id = resolveCategoryId(parsed.categoryHint, categoryMapping, newCategoryIds)
+        const account_id = resolveAccountId(parsed.account_name, accountMapping, defaultAccountId)
+        const amount_total_cents = parsed.amount_total != null ? reaisToCents(parsed.amount_total) : null
+        const amount_per_installment_cents = parsed.amount_per_installment != null ? reaisToCents(parsed.amount_per_installment) : null
         const group: TransactionGroup = {
           id: generateId(),
           user_id: userId,
           name: parsed.name,
           type: parsed.type,
-          account_id: defaultAccountId,
+          account_id,
           category_id,
           payment_mode: parsed.payment_mode,
           installments_total: parsed.installments_total,
-          amount_total: parsed.amount_total,
-          amount_per_installment: parsed.amount_per_installment,
+          amount_total: amount_total_cents,
+          amount_per_installment: amount_per_installment_cents,
           recurrence_period: parsed.recurrence_period,
           recurrence_end_date: parsed.recurrence_end_date,
           start_date: parsed.start_date,
@@ -251,7 +271,7 @@ export async function runImport(options: ImportRunOptions): Promise<ImportRunRes
         processed++
         onProgress?.(processed, totalSteps)
 
-        const childTxs = createGroupTransactions(group, parsed, now)
+        const childTxs = createGroupTransactions(group, now)
         result.installmentsCreated += childTxs.length
         await db.transactions.bulkAdd(childTxs)
         for (const r of childTxs) {
@@ -271,19 +291,20 @@ export async function runImport(options: ImportRunOptions): Promise<ImportRunRes
 
       for (const tx of transactions) {
         const category_id = resolveCategoryId(tx.categoryHint, categoryMapping, newCategoryIds)
+        const account_id = resolveAccountId(tx.account_name, accountMapping, defaultAccountId)
         const record: Transaction = {
           id: generateId(),
           group_id: null,
-          account_id: defaultAccountId,
+          account_id,
           category_id,
           type: tx.type,
-          amount: tx.amountCents,
+          amount: reaisToCents(tx.amount),
           description: tx.description,
           date: tx.date,
           paid_at: tx.is_paid ? now : null,
           is_paid: tx.is_paid,
           installment_number: null,
-          notes: null,
+          notes: tx.notes ?? null,
           tags: [],
           created_at: now,
           updated_at: now,

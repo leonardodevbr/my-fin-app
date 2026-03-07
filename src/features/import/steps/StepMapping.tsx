@@ -1,7 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect, useRef } from 'react'
 import type { Category } from '../../../db'
 import type { ParseResult } from '../importParser'
-import type { CategoryMapping } from '../importRunner'
+import type { CategoryMapping, AccountMapping } from '../importRunner'
 
 export interface StepMappingProps {
   result: ParseResult
@@ -9,7 +9,9 @@ export interface StepMappingProps {
   defaultAccountId: string
   accountOptions: { id: string; name: string }[]
   categoryMapping: CategoryMapping
+  accountMapping: AccountMapping
   onCategoryMappingChange: (m: CategoryMapping) => void
+  onAccountMappingChange: (m: AccountMapping) => void
   onDefaultAccountIdChange: (id: string) => void
 }
 
@@ -21,10 +23,12 @@ export function StepMapping({
   defaultAccountId,
   accountOptions,
   categoryMapping,
+  accountMapping,
   onCategoryMappingChange,
+  onAccountMappingChange,
   onDefaultAccountIdChange,
 }: StepMappingProps) {
-  const uniqueHints = useMemo(() => {
+  const uniqueCategoryHints = useMemo(() => {
     const set = new Set<string>()
     for (const t of result.transactions) {
       if (t.categoryHint?.trim()) set.add(t.categoryHint.trim())
@@ -35,7 +39,28 @@ export function StepMapping({
     return Array.from(set).sort()
   }, [result])
 
-  const updateMapping = (hint: string, value: string) => {
+  const uniqueAccountNames = useMemo(() => {
+    const set = new Set<string>()
+    for (const t of result.transactions) {
+      if (t.account_name?.trim()) set.add(t.account_name.trim())
+    }
+    for (const g of result.groups) {
+      if (g.account_name?.trim()) set.add(g.account_name.trim())
+    }
+    return Array.from(set).sort()
+  }, [result])
+
+  const hasAutoFilledAccounts = useRef(false)
+  useEffect(() => {
+    if (hasAutoFilledAccounts.current || accountOptions.length !== 1 || uniqueAccountNames.length === 0) return
+    hasAutoFilledAccounts.current = true
+    const singleId = accountOptions[0].id
+    const next: AccountMapping = {}
+    for (const name of uniqueAccountNames) next[name] = singleId
+    onAccountMappingChange(next)
+  }, [accountOptions, uniqueAccountNames, onAccountMappingChange])
+
+  const updateCategoryMapping = (hint: string, value: string) => {
     const next = { ...categoryMapping }
     if (value === CREATE_NEW) {
       next[hint] = { type: 'new', name: hint }
@@ -45,11 +70,16 @@ export function StepMapping({
     onCategoryMappingChange(next)
   }
 
+  const updateAccountMapping = (accountName: string, accountId: string) => {
+    const next = { ...accountMapping, [accountName]: accountId }
+    onAccountMappingChange(next)
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <label className="block text-sm font-medium text-surface-700 mb-1">
-          Conta para as transações
+          Conta padrão (quando não mapeada)
         </label>
         <select
           value={defaultAccountId}
@@ -64,15 +94,47 @@ export function StepMapping({
         </select>
       </div>
 
+      {uniqueAccountNames.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-surface-800 mb-2">
+            Mapeamento de contas
+          </h3>
+          <p className="text-xs text-surface-500 mb-3">
+            Vincule cada conta da planilha a uma conta existente no app.
+          </p>
+          <div className="space-y-3">
+            {uniqueAccountNames.map((name) => (
+              <div key={name} className="flex items-center gap-3">
+                <span className="text-sm text-surface-700 w-40 truncate" title={name}>
+                  {name}
+                </span>
+                <select
+                  value={accountMapping[name] ?? ''}
+                  onChange={(e) => updateAccountMapping(name, e.target.value)}
+                  className="flex-1 rounded-lg border border-surface-300 px-3 py-2 text-sm text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                >
+                  <option value="">— Usar conta padrão —</option>
+                  {accountOptions.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div>
         <h3 className="text-sm font-medium text-surface-800 mb-2">
           Mapear categorias da planilha
         </h3>
         <p className="text-xs text-surface-500 mb-3">
-          Cada bloco/categoria da planilha pode ser vinculado a uma categoria existente ou criada como nova.
+          Cada categoria da planilha pode ser vinculada a uma categoria existente ou criada como nova.
         </p>
         <div className="space-y-3">
-          {uniqueHints.map((hint) => {
+          {uniqueCategoryHints.map((hint) => {
             const current = categoryMapping[hint]
             const value =
               current?.type === 'existing'
@@ -87,7 +149,7 @@ export function StepMapping({
                 </span>
                 <select
                   value={value || ''}
-                  onChange={(e) => updateMapping(hint, e.target.value || CREATE_NEW)}
+                  onChange={(e) => updateCategoryMapping(hint, e.target.value || CREATE_NEW)}
                   className="flex-1 rounded-lg border border-surface-300 px-3 py-2 text-sm text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 >
                   <option value="">— Escolher —</option>
@@ -102,7 +164,7 @@ export function StepMapping({
             )
           })}
         </div>
-        {uniqueHints.length === 0 && (
+        {uniqueCategoryHints.length === 0 && (
           <p className="text-sm text-surface-500">Nenhuma categoria da planilha para mapear.</p>
         )}
       </div>
