@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Download, Loader2, Mail, X } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
-import { getSupabase } from '../../lib/supabase'
+import { getSupabase, supabaseUrl, supabaseAnonKey } from '../../lib/supabase'
 import { ImportWizard } from './ImportWizard'
 import { downloadTemplate } from './downloadTemplate'
 
@@ -59,13 +59,20 @@ export function ImportPage() {
     }
     setSendingEmail(true)
     try {
-      const { data, error } = await supabase.functions.invoke('send-template-email', {
+      const url = `${supabaseUrl}/functions/v1/send-template-email`
+      const res = await fetch(url, {
         method: 'POST',
+        cache: 'no-store',
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
+          apikey: supabaseAnonKey,
         },
       })
-      if (error) throw error
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error((data as { error?: string }).error ?? `Erro ${res.status}`)
+      }
       if (data?.error) throw new Error(data.error)
       localStorage.setItem(TEMPLATE_EMAIL_SENT_KEY, String(Date.now()))
       setNextSendInMs(COOLDOWN_MS)
