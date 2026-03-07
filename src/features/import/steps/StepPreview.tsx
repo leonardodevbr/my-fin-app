@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatCurrency } from '../../../lib/utils'
+import { formatCurrency, formatCurrencyFromCents } from '../../../lib/utils'
 import type { ParseResult } from '../importParser'
 
 export interface StepPreviewProps {

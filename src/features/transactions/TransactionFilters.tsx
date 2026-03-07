@@ -18,7 +18,7 @@ export interface TransactionFiltersProps {
 
 export function TransactionFilters({ value, onChange }: TransactionFiltersProps) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 -mx-1">
+    <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1">
       {FILTERS.map((f) => (
         <button
           key={f.value}

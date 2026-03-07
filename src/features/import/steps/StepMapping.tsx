@@ -2,6 +2,7 @@ import { useMemo, useEffect, useRef } from 'react'
 import type { Category } from '../../../db'
 import type { ParseResult } from '../importParser'
 import type { CategoryMapping, AccountMapping } from '../importRunner'
+import { SearchableSelect } from '../../../components/ui/SearchableSelect'
 
 export interface StepMappingProps {
   result: ParseResult
@@ -75,23 +76,39 @@ export function StepMapping({
     onAccountMappingChange(next)
   }
 
+  const defaultAccountOptions = useMemo(
+    () => accountOptions.map((acc) => ({ value: acc.id, label: acc.name })),
+    [accountOptions]
+  )
+
+  const accountMappingOptions = useMemo(
+    () => [
+      { value: '', label: '— Usar conta padrão —' },
+      ...accountOptions.map((acc) => ({ value: acc.id, label: acc.name })),
+    ],
+    [accountOptions]
+  )
+
+  const categoryOptions = useMemo(
+    () => [
+      { value: '', label: '— Escolher —' },
+      { value: CREATE_NEW, label: 'Criar nova categoria' },
+      ...categories.map((c) => ({ value: c.id, label: `${c.name} (${c.type})` })),
+    ],
+    [categories]
+  )
+
   return (
     <div className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-surface-700 mb-1">
-          Conta padrão (quando não mapeada)
-        </label>
-        <select
+        <SearchableSelect
+          label="Conta padrão (quando não mapeada)"
           value={defaultAccountId}
-          onChange={(e) => onDefaultAccountIdChange(e.target.value)}
-          className="w-full rounded-lg border border-surface-300 px-3 py-2 text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-        >
-          {accountOptions.map((acc) => (
-            <option key={acc.id} value={acc.id}>
-              {acc.name}
-            </option>
-          ))}
-        </select>
+          onChange={onDefaultAccountIdChange}
+          options={defaultAccountOptions}
+          placeholder="Selecione a conta"
+          searchPlaceholder="Buscar conta..."
+        />
       </div>
 
       {uniqueAccountNames.length > 0 && (
@@ -105,21 +122,18 @@ export function StepMapping({
           <div className="space-y-3">
             {uniqueAccountNames.map((name) => (
               <div key={name} className="flex items-center gap-3">
-                <span className="text-sm text-surface-700 w-40 truncate" title={name}>
+                <span className="text-sm text-surface-700 w-40 shrink-0 truncate" title={name}>
                   {name}
                 </span>
-                <select
-                  value={accountMapping[name] ?? ''}
-                  onChange={(e) => updateAccountMapping(name, e.target.value)}
-                  className="flex-1 rounded-lg border border-surface-300 px-3 py-2 text-sm text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                >
-                  <option value="">— Usar conta padrão —</option>
-                  {accountOptions.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex-1 min-w-0">
+                  <SearchableSelect
+                    value={accountMapping[name] ?? ''}
+                    onChange={(v) => updateAccountMapping(name, v)}
+                    options={accountMappingOptions}
+                    placeholder="— Usar conta padrão —"
+                    searchPlaceholder="Buscar conta..."
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -144,22 +158,18 @@ export function StepMapping({
                   : ''
             return (
               <div key={hint} className="flex items-center gap-3">
-                <span className="text-sm text-surface-700 w-40 truncate" title={hint}>
+                <span className="text-sm text-surface-700 w-40 shrink-0 truncate" title={hint}>
                   {hint}
                 </span>
-                <select
-                  value={value || ''}
-                  onChange={(e) => updateCategoryMapping(hint, e.target.value || CREATE_NEW)}
-                  className="flex-1 rounded-lg border border-surface-300 px-3 py-2 text-sm text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                >
-                  <option value="">— Escolher —</option>
-                  <option value={CREATE_NEW}>Criar nova categoria</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.type})
-                    </option>
-                  ))}
-                </select>
+                <div className="flex-1 min-w-0">
+                  <SearchableSelect
+                    value={value || ''}
+                    onChange={(v) => updateCategoryMapping(hint, v)}
+                    options={categoryOptions}
+                    placeholder="— Escolher —"
+                    searchPlaceholder="Buscar categoria..."
+                  />
+                </div>
               </div>
             )
           })}

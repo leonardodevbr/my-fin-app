@@ -35,10 +35,10 @@ export const ProjectionFilters = React.memo(function ProjectionFilters({
             type="button"
             onClick={() => onPeriodPresetChange(p)}
             className={cn(
-              'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+              'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors border',
               periodPreset === p
-                ? 'bg-primary-600 text-white'
-                : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
+                ? 'bg-primary-600 text-white border-primary-600'
+                : 'bg-surface-100 text-surface-700 hover:bg-surface-200 border-surface-300'
             )}
           >
             {p === '3m' && '3 meses'}
@@ -80,8 +80,8 @@ export const ProjectionFilters = React.memo(function ProjectionFilters({
             type="button"
             onClick={() => onGranularityChange('month')}
             className={cn(
-              'rounded-md px-3 py-1.5 text-sm font-medium',
-              granularity === 'month' ? 'bg-white shadow text-surface-900' : 'text-surface-600'
+              'rounded-md px-3 py-1.5 text-sm font-medium border',
+              granularity === 'month' ? 'bg-white shadow text-surface-900 border-surface-300' : 'text-surface-600 border-surface-300'
             )}
           >
             Por mês
@@ -90,8 +90,8 @@ export const ProjectionFilters = React.memo(function ProjectionFilters({
             type="button"
             onClick={() => onGranularityChange('day')}
             className={cn(
-              'rounded-md px-3 py-1.5 text-sm font-medium',
-              granularity === 'day' ? 'bg-white shadow text-surface-900' : 'text-surface-600'
+              'rounded-md px-3 py-1.5 text-sm font-medium border',
+              granularity === 'day' ? 'bg-white shadow text-surface-900 border-surface-300' : 'text-surface-600 border-surface-300'
             )}
           >
             Por dia
@@ -114,10 +114,10 @@ export const ProjectionFilters = React.memo(function ProjectionFilters({
               type="button"
               onClick={() => onScenarioChange(value)}
               className={cn(
-                'rounded-lg px-3 py-1.5 text-sm font-medium',
+                'rounded-lg px-3 py-1.5 text-sm font-medium border',
                 scenario === value
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
+                  ? 'bg-primary-600 text-white border-primary-600'
+                  : 'bg-surface-100 text-surface-700 hover:bg-surface-200 border-surface-300'
               )}
             >
               {label}
