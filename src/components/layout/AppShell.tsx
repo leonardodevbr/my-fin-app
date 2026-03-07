@@ -51,7 +51,7 @@ export function AppShell({ children }: AppShellProps) {
             <Menu className="h-6 w-6 text-surface-600" />
           </button>
           <div className="flex-1 lg:flex-none flex items-center lg:hidden">
-            <AppLogo height={34} className="max-h-11" />
+            <AppLogo height={30} className="max-h-11" />
           </div>
           <div className="flex items-center gap-2 text-surface-500 text-sm">
             {syncing && <span>Sincronizando…</span>}

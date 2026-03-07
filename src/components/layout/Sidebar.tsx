@@ -61,7 +61,7 @@ export function Sidebar() {
         )}
       >
         <div className="flex items-center justify-between h-14 px-4 border-b border-surface-700">
-          <AppLogo height={34} light fallbackClassName="font-semibold text-primary-400 text-lg" />
+          <AppLogo height={30} light fallbackClassName="font-semibold text-primary-400 text-lg" />
           <button
             type="button"
             onClick={() => setSidebarOpen(false)}
