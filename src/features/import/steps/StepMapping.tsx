@@ -93,7 +93,11 @@ export function StepMapping({
     () => [
       { value: '', label: '— Escolher —' },
       { value: CREATE_NEW, label: 'Criar nova categoria' },
-      ...categories.map((c) => ({ value: c.id, label: `${c.name} (${c.type})` })),
+      ...categories.map((c) => ({
+        value: c.id,
+        label: `${c.name} (${c.type})`,
+        color: c.color ?? undefined,
+      })),
     ],
     [categories]
   )
