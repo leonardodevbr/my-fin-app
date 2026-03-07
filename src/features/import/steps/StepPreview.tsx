@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatCurrency, formatCurrencyFromCents } from '../../../lib/utils'
+import { formatCurrency } from '../../../lib/utils'
 import type { ParseResult } from '../importParser'
 
 export interface StepPreviewProps {
@@ -121,7 +121,7 @@ export function StepPreview({
                     <td className="px-3 py-2">{t.date}</td>
                     <td className="px-3 py-2">{t.description}</td>
                     <td className="px-3 py-2 text-right">
-                      {formatCurrencyFromCents(t.amountCents)}
+                      {formatCurrency(t.amount)}
                     </td>
                     <td className="px-3 py-2">{t.is_paid ? 'Sim' : 'Não'}</td>
                   </tr>
