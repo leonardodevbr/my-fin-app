@@ -292,13 +292,31 @@ export async function runImport(options: ImportRunOptions): Promise<ImportRunRes
       for (const tx of transactions) {
         const category_id = resolveCategoryId(tx.categoryHint, categoryMapping, newCategoryIds)
         const account_id = resolveAccountId(tx.account_name, accountMapping, defaultAccountId)
+        const amountCents = Math.round(tx.amount * 100)
+        // Evita duplicata: mesma data, descrição, valor e conta no mesmo mês
+        const existing = await db.transactions
+          .where('date')
+          .equals(tx.date)
+          .filter(
+            (r) =>
+              r.description === tx.description &&
+              r.amount === amountCents &&
+              r.account_id === account_id
+          )
+          .first()
+        if (existing) {
+          processed++
+          onProgress?.(processed, totalSteps)
+          continue
+        }
+
         const record: Transaction = {
           id: generateId(),
           group_id: null,
           account_id,
           category_id,
           type: tx.type,
-          amount: Math.round(tx.amount * 100),
+          amount: amountCents,
           description: tx.description,
           date: tx.date,
           paid_at: tx.is_paid ? now : null,

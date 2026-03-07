@@ -81,7 +81,7 @@ type FormValues = z.infer<typeof baseSchema>
 
 function buildSchema(mode: FormValues['payment_mode']) {
   return baseSchema
-    .refine((d) => d.amount_cents > 0 || (mode === 'installments' && (d.amount_per_installment_cents ?? 0) > 0) || (mode === 'installments' && (d.amount_total_cents ?? 0) > 0), {
+    .refine((d) => d.amount_cents > 0, {
       message: 'Informe o valor',
       path: ['amount_cents'],
     })
@@ -96,7 +96,7 @@ function buildSchema(mode: FormValues['payment_mode']) {
       (d) => {
         if (mode === 'installments') {
           const total = (d.installments_total ?? 0) >= 2
-          const amount = (d.installment_mode === 'total' ? (d.amount_total_cents ?? 0) : (d.amount_per_installment_cents ?? d.amount_cents ?? 0)) > 0
+          const amount = (d.amount_cents ?? 0) > 0
           return total && amount
         }
         return true
@@ -310,10 +310,16 @@ export function TransactionFormModal({
       }
 
       if (values.payment_mode === 'installments') {
+        const n = Math.max(2, Math.min(360, values.installments_total ?? 2))
         data.installment_mode = values.installment_mode ?? 'per_parcel'
-        data.amount_per_installment_cents = values.installment_mode === 'per_parcel' ? (values.amount_per_installment_cents ?? values.amount_cents) : undefined
-        data.amount_total_cents = values.installment_mode === 'total' ? values.amount_total_cents : undefined
-        data.installments_total = Math.max(2, Math.min(360, values.installments_total ?? 2))
+        if (values.installment_mode === 'total') {
+          data.amount_total_cents = values.amount_cents
+          data.amount_per_installment_cents = undefined
+        } else {
+          data.amount_per_installment_cents = values.amount_cents
+          data.amount_total_cents = undefined
+        }
+        data.installments_total = n
         data.start_date = values.start_date ?? values.date
         data.installment_interval = (values.installment_interval as 'weekly' | 'biweekly' | 'monthly' | 'yearly') ?? 'monthly'
       }
@@ -390,6 +396,32 @@ export function TransactionFormModal({
             </div>
           )}
 
+          {/* Modo de entrada (primeiro campo, antes do valor) */}
+          {!transaction?.group_id && (
+            <div>
+              <label className="block text-sm font-medium text-surface-700 mb-2">Modo de entrada</label>
+              <div className="grid grid-cols-3 gap-2">
+                {PAYMENT_MODES.map(({ value, label, desc, icon: Icon }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setValue('payment_mode', value)}
+                    className={cn(
+                      'rounded-xl border-2 p-3 text-left transition-colors',
+                      payment_mode === value
+                        ? 'border-primary-500 bg-primary-50'
+                        : 'border-surface-200 hover:border-surface-300'
+                    )}
+                  >
+                    <Icon className="h-5 w-5 text-surface-600 mb-1" />
+                    <div className="font-medium text-sm text-surface-900">{label}</div>
+                    <div className="text-xs text-surface-500">{desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Type tabs */}
           <div className="flex rounded-lg bg-surface-100 p-1">
             {(['income', 'expense', 'transfer'] as const).map((t) => (
@@ -407,30 +439,46 @@ export function TransactionFormModal({
             ))}
           </div>
 
-          {/* Payment mode selector */}
-          {!transaction?.group_id && (
-            <div className="grid grid-cols-3 gap-2">
-              {PAYMENT_MODES.map(({ value, label, desc, icon: Icon }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setValue('payment_mode', value)}
-                  className={cn(
-                    'rounded-xl border-2 p-3 text-left transition-colors',
-                    payment_mode === value
-                      ? 'border-primary-500 bg-primary-50'
-                      : 'border-surface-200 hover:border-surface-300'
-                  )}
-                >
-                  <Icon className="h-5 w-5 text-surface-600 mb-1" />
-                  <div className="font-medium text-sm text-surface-900">{label}</div>
-                  <div className="text-xs text-surface-500">{desc}</div>
-                </button>
-              ))}
-            </div>
+          {/* Parcelado: Modo de entrada (Por parcela / Valor total) antes do valor + um único campo Valor */}
+          {payment_mode === 'installments' && !transaction?.group_id && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-surface-700 mb-2">Modo de entrada</label>
+                <div className="flex rounded-lg bg-surface-100 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setValue('installment_mode', 'per_parcel')}
+                    className={cn(
+                      'flex-1 py-2 text-sm font-medium rounded-md',
+                      watch('installment_mode') === 'per_parcel' ? 'bg-white shadow' : ''
+                    )}
+                  >
+                    Por parcela
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setValue('installment_mode', 'total')}
+                    className={cn(
+                      'flex-1 py-2 text-sm font-medium rounded-md',
+                      watch('installment_mode') === 'total' ? 'bg-white shadow' : ''
+                    )}
+                  >
+                    Valor total
+                  </button>
+                </div>
+              </div>
+              <CurrencyInput
+                ref={amountInputRef}
+                label={watch('installment_mode') === 'total' ? 'Valor (total)' : 'Valor (por parcela)'}
+                value={amount_cents}
+                onChange={(c) => setValue('amount_cents', c)}
+                error={errors.amount_cents?.message}
+                className="text-xl font-semibold"
+              />
+            </>
           )}
 
-          {/* Amount */}
+          {/* Amount (single e recurring) */}
           {payment_mode === 'single' && (
             <CurrencyInput
               ref={amountInputRef}
@@ -449,29 +497,6 @@ export function TransactionFormModal({
               onChange={(c) => setValue('amount_cents', c)}
               error={errors.amount_cents?.message}
               className="text-2xl font-bold"
-            />
-          )}
-          {payment_mode === 'installments' && watch('installment_mode') === 'per_parcel' && (
-            <CurrencyInput
-              ref={amountInputRef}
-              label="Valor da parcela"
-              value={watch('amount_per_installment_cents') ?? amount_cents}
-              onChange={(c) => {
-                setValue('amount_per_installment_cents', c)
-                setValue('amount_cents', c)
-              }}
-              error={errors.amount_per_installment_cents?.message ?? errors.amount_cents?.message}
-              className="text-xl font-semibold"
-            />
-          )}
-          {payment_mode === 'installments' && watch('installment_mode') === 'total' && (
-            <CurrencyInput
-              ref={amountInputRef}
-              label="Valor total"
-              value={watch('amount_total_cents') ?? 0}
-              onChange={(c) => setValue('amount_total_cents', c)}
-              error={errors.amount_total_cents?.message}
-              className="text-xl font-semibold"
             />
           )}
 
@@ -568,48 +593,31 @@ export function TransactionFormModal({
                 />
               )}
               <div className="flex flex-wrap gap-2">
-                {RECURRING_EXAMPLES.map((ex) => (
-                  <button
-                    key={ex}
-                    type="button"
-                    onClick={() => setValue('description', ex)}
-                    className="rounded-full bg-surface-100 px-3 py-1 text-sm text-surface-700 hover:bg-surface-200"
-                  >
-                    {ex}
-                  </button>
-                ))}
+                {RECURRING_EXAMPLES.map((ex) => {
+                  const isSelected = (watch('description') ?? '').trim() === ex
+                  return (
+                    <button
+                      key={ex}
+                      type="button"
+                      onClick={() => setValue('description', ex)}
+                      className={cn(
+                        'rounded-full px-3 py-1 text-sm font-medium transition-colors',
+                        isSelected
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
+                      )}
+                    >
+                      {ex}
+                    </button>
+                  )
+                })}
               </div>
             </>
           )}
 
-          {/* Installments extra fields */}
+          {/* Installments extra fields (Modo de entrada + Valor já aparecem antes) */}
           {payment_mode === 'installments' && !transaction?.group_id && (
             <>
-              <div>
-                <label className="block text-sm font-medium text-surface-700 mb-2">Modo de entrada</label>
-                <div className="flex rounded-lg bg-surface-100 p-1">
-                  <button
-                    type="button"
-                    onClick={() => setValue('installment_mode', 'per_parcel')}
-                    className={cn(
-                      'flex-1 py-2 text-sm font-medium rounded-md',
-                      watch('installment_mode') === 'per_parcel' ? 'bg-white shadow' : ''
-                    )}
-                  >
-                    Por parcela
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setValue('installment_mode', 'total')}
-                    className={cn(
-                      'flex-1 py-2 text-sm font-medium rounded-md',
-                      watch('installment_mode') === 'total' ? 'bg-white shadow' : ''
-                    )}
-                  >
-                    Valor total
-                  </button>
-                </div>
-              </div>
               <div>
                 <label className="block text-sm font-medium text-surface-700 mb-1">Número de parcelas</label>
                 <input
@@ -620,15 +628,18 @@ export function TransactionFormModal({
                   {...register('installments_total', { valueAsNumber: true })}
                 />
               </div>
-              {(watch('installment_mode') === 'total' ? (watch('amount_total_cents') ?? 0) : (watch('amount_per_installment_cents') ?? watch('amount_cents') ?? 0)) > 0 &&
-                (watch('installments_total') ?? 0) >= 2 && (
+              {amount_cents > 0 && (watch('installments_total') ?? 0) >= 2 && (
                 <InstallmentSummary
                   mode={watch('installment_mode') ?? 'per_parcel'}
-                  totalCents={watch('installment_mode') === 'total' ? (watch('amount_total_cents') ?? 0) : (watch('amount_per_installment_cents') ?? 0) * (watch('installments_total') ?? 2)}
+                  totalCents={
+                    watch('installment_mode') === 'total'
+                      ? amount_cents
+                      : amount_cents * (watch('installments_total') ?? 2)
+                  }
                   perParcelCents={
                     watch('installment_mode') === 'total'
-                      ? Math.floor((watch('amount_total_cents') ?? 0) / (watch('installments_total') ?? 2))
-                      : (watch('amount_per_installment_cents') ?? watch('amount_cents') ?? 0)
+                      ? Math.floor(amount_cents / (watch('installments_total') ?? 2))
+                      : amount_cents
                   }
                   installmentsTotal={watch('installments_total') ?? 2}
                 />
@@ -649,28 +660,36 @@ export function TransactionFormModal({
                 total={watch('installments_total') ?? 2}
                 amountPerInstallment={
                   watch('installment_mode') === 'total'
-                    ? Math.floor((watch('amount_total_cents') ?? 0) / (watch('installments_total') ?? 2))
-                    : (watch('amount_per_installment_cents') ?? watch('amount_cents') ?? 0)
+                    ? Math.floor(amount_cents / (watch('installments_total') ?? 2))
+                    : amount_cents
                 }
                 amountTotal={
                   watch('installment_mode') === 'total'
-                    ? (watch('amount_total_cents') ?? 0)
-                    : (watch('amount_per_installment_cents') ?? watch('amount_cents') ?? 0) * (watch('installments_total') ?? 2)
+                    ? amount_cents
+                    : amount_cents * (watch('installments_total') ?? 2)
                 }
                 interval={watch('installment_interval') ?? 'monthly'}
                 description={watch('description') || 'Parcela'}
               />
               <div className="flex flex-wrap gap-2">
-                {INSTALLMENT_EXAMPLES.map((ex) => (
-                  <button
-                    key={ex}
-                    type="button"
-                    onClick={() => setValue('description', ex)}
-                    className="rounded-full bg-surface-100 px-3 py-1 text-sm text-surface-700 hover:bg-surface-200"
-                  >
-                    {ex}
-                  </button>
-                ))}
+                {INSTALLMENT_EXAMPLES.map((ex) => {
+                  const isSelected = (watch('description') ?? '').trim() === ex
+                  return (
+                    <button
+                      key={ex}
+                      type="button"
+                      onClick={() => setValue('description', ex)}
+                      className={cn(
+                        'rounded-full px-3 py-1 text-sm font-medium transition-colors',
+                        isSelected
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
+                      )}
+                    >
+                      {ex}
+                    </button>
+                  )
+                })}
               </div>
             </>
           )}

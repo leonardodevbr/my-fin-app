@@ -97,11 +97,34 @@ function getSheetRows(ws: XLSX.WorkSheet): unknown[][] {
   return XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as unknown[][]
 }
 
+/** Normaliza data para YYYY-MM-DD para deduplicação */
+function normalizeDate(s: string): string {
+  if (!s || !s.trim()) return ''
+  const d = new Date(s.trim())
+  if (Number.isNaN(d.getTime())) return s.trim()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** Chave para deduplicar transações: mesma data, descrição, valor e conta = mesma transação */
+function transactionDedupeKey(
+  date: string,
+  description: string,
+  amount: number,
+  account_name: string
+): string {
+  const amt = Number.isNaN(amount) ? 0 : Math.round(amount * 100)
+  return `${normalizeDate(date)}|${description.trim().toLowerCase()}|${amt}|${(account_name || 'Conta').trim().toLowerCase()}`
+}
+
 /** transactions sheet: row 0=title, 1=aviso, 2=headers, 3+=data */
 function parseTransactionsSheet(workbook: WorkBook, result: ParseResult): void {
   const sheet = workbook.Sheets['transactions']
   if (!sheet) return
   const rows = getSheetRows(sheet)
+  const seenKeys = new Set<string>()
   for (let i = 3; i < rows.length; i++) {
     const row = rows[i] as unknown[]
 
@@ -120,6 +143,19 @@ function parseTransactionsSheet(workbook: WorkBook, result: ParseResult): void {
     const amount = toNum(amountRaw)
     if (!description || amount <= 0 || Number.isNaN(amount)) continue
 
+    const normalizedDate = date ? normalizeDate(date) : new Date().toISOString().slice(0, 10)
+    const account = account_name || 'Conta'
+    const key = transactionDedupeKey(normalizedDate, description, amount, account)
+    if (seenKeys.has(key)) {
+      result.warnings.push({
+        sheet: 'transactions',
+        row: i + 1,
+        reason: 'Linha duplicada (mesma data, descrição, valor e conta); ignorada.',
+      })
+      continue
+    }
+    seenKeys.add(key)
+
     const type = VALID_TYPES.includes(typeRaw as (typeof VALID_TYPES)[number])
       ? (typeRaw as (typeof VALID_TYPES)[number])
       : 'expense'
@@ -127,11 +163,11 @@ function parseTransactionsSheet(workbook: WorkBook, result: ParseResult): void {
     result.transactions.push({
       id: genId(),
       type,
-      date: date || new Date().toISOString().slice(0, 10),
+      date: normalizedDate || new Date().toISOString().slice(0, 10),
       description,
       amount,
       is_paid,
-      account_name: account_name || 'Conta',
+      account_name: account,
       categoryHint: category_name || null,
       notes: notesRaw || null,
       _source: 'transactions',
@@ -139,11 +175,25 @@ function parseTransactionsSheet(workbook: WorkBook, result: ParseResult): void {
   }
 }
 
+/** Chave para deduplicar grupos: mesmo nome, data início, valor total e conta = mesmo grupo */
+function groupDedupeKey(
+  name: string,
+  start_date: string,
+  amount_total: number,
+  installments_total: number | null,
+  account_name: string
+): string {
+  const amt = Number.isNaN(amount_total) ? 0 : Math.round(amount_total * 100)
+  const n = (installments_total ?? 0).toString()
+  return `${name.trim().toLowerCase()}|${normalizeDate(start_date)}|${amt}|${n}|${(account_name || 'Conta').trim().toLowerCase()}`
+}
+
 /** transaction_groups sheet: row 0=title, 1=aviso, 2=headers, 3+=data */
 function parseGroupsSheet(workbook: WorkBook, result: ParseResult): void {
   const sheet = workbook.Sheets['transaction_groups']
   if (!sheet) return
   const rows = getSheetRows(sheet)
+  const seenKeys = new Set<string>()
   for (let i = 3; i < rows.length; i++) {
     const row = rows[i] as unknown[]
 
@@ -199,6 +249,19 @@ function parseGroupsSheet(workbook: WorkBook, result: ParseResult): void {
       }
     }
 
+    const account = account_name || 'Conta'
+    const normalizedStart = normalizeDate(start_date) || new Date().toISOString().slice(0, 10)
+    const key = groupDedupeKey(name, normalizedStart, amount_total, installments_total, account)
+    if (seenKeys.has(key)) {
+      result.warnings.push({
+        sheet: 'transaction_groups',
+        row: i + 1,
+        reason: 'Grupo duplicado (mesmo nome, data, valor e conta); ignorado.',
+      })
+      continue
+    }
+    seenKeys.add(key)
+
     let recurrence_period: 'monthly' | 'weekly' | 'yearly' | null = null
     if (recurrence_periodRaw && VALID_RECURRENCE.includes(recurrence_periodRaw as (typeof VALID_RECURRENCE)[number])) {
       recurrence_period = recurrence_periodRaw as (typeof VALID_RECURRENCE)[number]
@@ -214,8 +277,8 @@ function parseGroupsSheet(workbook: WorkBook, result: ParseResult): void {
       amount_per_installment: amount_per_installment > 0 ? amount_per_installment : null,
       recurrence_period,
       recurrence_end_date: recurrence_end_dateRaw || null,
-      start_date: start_date || new Date().toISOString().slice(0, 10),
-      account_name: account_name || 'Conta',
+      start_date: normalizedStart,
+      account_name: account,
       categoryHint: category_name || null,
       _source: 'transaction_groups',
     })
