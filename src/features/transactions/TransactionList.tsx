@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import type { Transaction } from '../../db'
+import type { Transaction, TransactionGroup } from '../../db'
 import { db } from '../../db'
 import { formatCurrencyFromCents, cn } from '../../lib/utils'
 import { useAccounts } from '../../hooks/useAccounts'
@@ -65,7 +65,8 @@ export function TransactionList({
     [transactions]
   )
   const groupsList = useLiveQuery(
-    () => (groupIds.length > 0 ? db.transaction_groups.where('id').anyOf(groupIds).toArray() : Promise.resolve([])),
+    async (): Promise<TransactionGroup[]> =>
+      groupIds.length > 0 ? db.transaction_groups.where('id').anyOf(groupIds).toArray() : [],
     [groupIds.join(',')]
   )
   const groupMap = useMemo(() => new Map((groupsList ?? []).map((g) => [g.id, g])), [groupsList])
