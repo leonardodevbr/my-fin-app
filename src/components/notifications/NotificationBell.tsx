@@ -4,6 +4,7 @@ import { Bell, Mail, ChevronRight } from 'lucide-react'
 import { useDueTransactions } from '../../hooks/useDueTransactions'
 import { usePusher } from '../../hooks/usePusher'
 import { useAuth } from '../../hooks/useAuth'
+import { getSupabase, isSupabaseConfigured } from '../../lib/supabase'
 import { formatCurrencyFromCents, formatDate } from '../../lib/utils'
 import { cn } from '../../lib/utils'
 import toast from 'react-hot-toast'
@@ -116,14 +117,22 @@ function SendReportButton({ onSent }: { onSent: () => void }) {
   const dueTransactions = useDueTransactions({ daysAhead: 14, unpaidOnly: true })
 
   const handleSend = async () => {
-    if (!session?.access_token) {
+    if (!isSupabaseConfigured) {
+      toast.error('Sincronização não configurada.')
+      return
+    }
+    const supabase = getSupabase()
+    if (!supabase) {
+      toast.error('Sincronização não configurada.')
+      return
+    }
+    const { data: { session: currentSession } } = await supabase.auth.getSession()
+    if (!currentSession?.access_token) {
       toast.error('Faça login para enviar relatório por e-mail.')
       return
     }
     setSending(true)
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? ''
-      const fnUrl = `${supabaseUrl}/functions/v1/send-report-email`
       const items = dueTransactions.map((t) => ({
         description: t.description,
         date: t.date,
@@ -131,17 +140,16 @@ function SendReportButton({ onSent }: { onSent: () => void }) {
         type: t.type,
         is_paid: t.is_paid,
       }))
-      const res = await fetch(fnUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ reportType: 'due', items }),
+      const { data, error } = await supabase.functions.invoke('send-report-email', {
+        body: { reportType: 'due', items },
       })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        toast.error((data as { error?: string }).error ?? 'Falha ao enviar e-mail')
+      if (error) {
+        toast.error(error.message ?? 'Falha ao enviar e-mail')
+        return
+      }
+      const errMsg = (data as { error?: string } | null)?.error
+      if (errMsg) {
+        toast.error(errMsg)
         return
       }
       toast.success('Relatório enviado para seu e-mail.')

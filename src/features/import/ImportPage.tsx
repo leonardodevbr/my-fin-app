@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Download, Loader2, Mail, X } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
-import { getSupabase, supabaseUrl, supabaseAnonKey } from '../../lib/supabase'
+import { getSupabase } from '../../lib/supabase'
 import { ImportWizard } from './ImportWizard'
 import { downloadTemplate } from './downloadTemplate'
 
@@ -50,32 +50,21 @@ export function ImportPage() {
       toast.error('Sincronização não configurada')
       return
     }
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
+    const { data: { session } } = await supabase.auth.getSession()
     if (!session?.access_token) {
       toast.error('Sessão expirada. Faça login novamente.', { duration: 5000 })
       return
     }
     setSendingEmail(true)
     try {
-      const url = `${supabaseUrl}/functions/v1/send-template-email`
-      const token = session.access_token
-      const res = await fetch(url, {
-        method: 'POST',
-        cache: 'no-store',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-          'X-Client-JWT': token,
-          apikey: supabaseAnonKey,
-        },
+      const { data, error } = await supabase.functions.invoke('send-template-email', {
+        body: {},
       })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        throw new Error((data as { error?: string }).error ?? `Erro ${res.status}`)
+      if (error) {
+        throw new Error(error.message)
       }
-      if (data?.error) throw new Error(data.error)
+      const errMsg = (data as { error?: string } | null)?.error
+      if (errMsg) throw new Error(errMsg)
       localStorage.setItem(TEMPLATE_EMAIL_SENT_KEY, String(Date.now()))
       setNextSendInMs(COOLDOWN_MS)
       toast.success('E-mail enviado! Verifique sua caixa de entrada.')
