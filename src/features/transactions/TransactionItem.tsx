@@ -4,6 +4,7 @@ import type { Transaction } from '../../db'
 import type { PaymentMode } from '../../db/schema'
 import { formatCurrencyFromCents, formatDate } from '../../lib/utils'
 import { cn } from '../../lib/utils'
+import { CategoryIcon, CATEGORY_ICON_MAP } from '../categories/categoryIconMap'
 
 const SWIPE_THRESHOLD = 60
 
@@ -12,6 +13,8 @@ export interface TransactionItemProps {
   accountName: string
   categoryColor: string
   categoryName: string
+  /** Nome do ícone da categoria (lucide), opcional */
+  categoryIcon?: string | null
   onEdit: () => void
   onTogglePaid: () => void
   onDelete: () => void
@@ -29,6 +32,7 @@ export function TransactionItem({
   accountName,
   categoryColor,
   categoryName,
+  categoryIcon,
   onEdit,
   onTogglePaid,
   onDelete,
@@ -113,27 +117,15 @@ export function TransactionItem({
             {selected && <Check className="h-3 w-3" />}
           </button>
         )}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onTogglePaid()
-          }}
-          className={cn(
-            'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
-            transaction.is_paid
-              ? 'bg-primary-100 text-primary-700 hover:bg-primary-200'
-              : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
-          )}
-          aria-label={transaction.is_paid ? 'Marcar como não pago' : 'Marcar como pago'}
-        >
-          {transaction.is_paid ? 'Pago' : 'A pagar'}
-        </button>
         <div
           className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center text-white text-sm font-medium"
           style={{ backgroundColor: categoryColor }}
         >
-          {categoryName?.charAt(0) ?? '?'}
+          {categoryIcon && CATEGORY_ICON_MAP[categoryIcon] ? (
+            <CategoryIcon iconName={categoryIcon} className="h-4 w-4" />
+          ) : (
+            (categoryName?.charAt(0) ?? '?')
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap gap-y-0.5">
@@ -165,7 +157,23 @@ export function TransactionItem({
               ))}
           </div>
         </div>
-        <p className={cn('shrink-0 font-semibold', amountColor)}>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onTogglePaid()
+          }}
+          className={cn(
+            'shrink-0 w-[4.5rem] rounded-full px-2 py-1 text-xs font-medium transition-colors text-center',
+            transaction.is_paid
+              ? 'bg-primary-100 text-primary-700 hover:bg-primary-200'
+              : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
+          )}
+          aria-label={transaction.is_paid ? 'Marcar como não pago' : 'Marcar como pago'}
+        >
+          {transaction.is_paid ? 'Pago' : 'A pagar'}
+        </button>
+        <p className={cn('shrink-0 font-semibold tabular-nums', amountColor)}>
           {transaction.type === 'expense' ? '-' : '+'}
           {formatCurrencyFromCents(transaction.amount)}
         </p>

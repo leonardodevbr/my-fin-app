@@ -73,7 +73,7 @@ export function TransactionList({
 
   const accountMap = useMemo(() => new Map(accounts.map((a) => [a.id, a.name])), [accounts])
   const categoryMap = useMemo(
-    () => new Map(categories.map((c) => [c.id, { name: c.name, color: c.color }])),
+    () => new Map(categories.map((c) => [c.id, { name: c.name, color: c.color, icon: c.icon }])),
     [categories]
   )
 
@@ -159,6 +159,7 @@ export function TransactionList({
                   accountName={accountMap.get(t.account_id) ?? t.account_id}
                   categoryColor={categoryMap.get(t.category_id ?? '')?.color ?? '#94a3b8'}
                   categoryName={categoryMap.get(t.category_id ?? '')?.name ?? ''}
+                  categoryIcon={categoryMap.get(t.category_id ?? '')?.icon ?? null}
                   onEdit={() => onEdit(t)}
                   onTogglePaid={() => onTogglePaid(t)}
                   onDelete={() => onDelete(t)}

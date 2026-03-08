@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, CheckSquare } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -233,31 +233,40 @@ export function TransactionsPage() {
           onPrev={() => addMonth(-1)}
           onNext={() => addMonth(1)}
         />
-        <Button
-          onClick={handleNew}
-          className={cn(
-            'hidden sm:inline-flex text-white hover:opacity-90',
-            defaultTypeForNew === 'income' && 'bg-[var(--color-income)]',
-            defaultTypeForNew === 'expense' && 'bg-[var(--color-expense)]',
-            defaultTypeForNew === 'transfer' && 'bg-[var(--color-transfer)]'
+        <div className="flex items-center gap-2">
+          {!selectionMode ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectionMode(true)}
+              className="inline-flex"
+              aria-label="Selecionar transações"
+            >
+              <CheckSquare className="h-4 w-4 mr-1.5" />
+              Selecionar
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => { setSelectionMode(false); setSelectedIds(new Set()) }}>
+              Cancelar seleção
+            </Button>
           )}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Nova transação
-        </Button>
+          <Button
+            onClick={handleNew}
+            className={cn(
+              'hidden sm:inline-flex text-white hover:opacity-90',
+              defaultTypeForNew === 'income' && 'bg-[var(--color-income)]',
+              defaultTypeForNew === 'expense' && 'bg-[var(--color-expense)]',
+              defaultTypeForNew === 'transfer' && 'bg-[var(--color-transfer)]'
+            )}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nova transação
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <TransactionFilters value={filter} onChange={setFilter} />
-        {!selectionMode ? (
-          <Button variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>
-            Selecionar
-          </Button>
-        ) : (
-          <Button variant="ghost" size="sm" onClick={() => { setSelectionMode(false); setSelectedIds(new Set()) }}>
-            Cancelar seleção
-          </Button>
-        )}
       </div>
 
       <input
