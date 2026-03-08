@@ -113,7 +113,6 @@ export function NotificationBell() {
 
 function SendReportButton({ onSent }: { onSent: () => void }) {
   const [sending, setSending] = useState(false)
-  const { session } = useAuth()
   const dueTransactions = useDueTransactions({ daysAhead: 14, unpaidOnly: true })
 
   const handleSend = async () => {
