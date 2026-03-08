@@ -123,9 +123,9 @@ export function TransactionFormModal({
   const categories = useCategories()
   const recentDescriptions = useRecentDescriptions(20)
   const [tagInput, setTagInput] = useState('')
-  const [editScope, setEditScope] = useState<EditGroupScope>('this_only')
   const [groupInfo, setGroupInfo] = useState<{ name: string; current: number; total: number } | null>(null)
   const [showExitConfirm, setShowExitConfirm] = useState(false)
+  const [scopeModalValues, setScopeModalValues] = useState<FormValues | null>(null)
   const amountInputRef = useRef<HTMLInputElement>(null)
 
   const defaultValues: FormValues = useMemo(
@@ -268,28 +268,11 @@ export function TransactionFormModal({
       return
     }
     if (!user?.id) return
+    if (transaction?.group_id && groupInfo) {
+      setScopeModalValues(values)
+      return
+    }
     try {
-      if (transaction?.group_id && groupInfo) {
-        await updateTransactionInGroup(
-          transaction.id,
-          {
-            type: values.type,
-            amount: values.amount_cents,
-            description: values.description.trim(),
-            date: values.date,
-            account_id: values.account_id,
-            category_id: values.category_id || null,
-            is_paid: values.is_paid,
-            notes: values.notes.trim() || null,
-            tags: values.tags,
-          },
-          editScope,
-          user.id
-        )
-        onSaved()
-        onClose()
-        return
-      }
       if (transaction && !transaction.group_id) {
         const now = new Date().toISOString()
         await updateTransaction(transaction.id, {
@@ -357,6 +340,34 @@ export function TransactionFormModal({
     }
   }
 
+  const handleScopeChoice = async (scope: EditGroupScope) => {
+    if (!scopeModalValues || !transaction?.group_id || !user?.id) return
+    try {
+      await updateTransactionInGroup(
+        transaction.id,
+        {
+          type: scopeModalValues.type,
+          amount: scopeModalValues.amount_cents,
+          description: scopeModalValues.description.trim(),
+          date: scopeModalValues.date,
+          account_id: scopeModalValues.account_id,
+          category_id: scopeModalValues.category_id || null,
+          is_paid: scopeModalValues.is_paid,
+          notes: scopeModalValues.notes.trim() || null,
+          tags: scopeModalValues.tags,
+        },
+        scope,
+        user.id
+      )
+      setScopeModalValues(null)
+      toast.success('Lançamento(s) atualizado(s)')
+      onSaved()
+      onClose()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao salvar')
+    }
+  }
+
   if (!open) return null
 
   const content = (
@@ -383,46 +394,6 @@ export function TransactionFormModal({
         className="flex flex-1 flex-col overflow-hidden"
       >
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-          {groupInfo && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
-              <p className="text-sm text-amber-900">
-                Este lançamento faz parte de um grupo: <strong>{groupInfo.name}</strong> (parcela {groupInfo.current} de {groupInfo.total})
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditScope('this_only')}
-                  className={cn(
-                    'px-2 py-1 rounded text-sm font-medium',
-                    editScope === 'this_only' ? 'bg-amber-200' : 'bg-white border border-amber-300 hover:bg-amber-100'
-                  )}
-                >
-                  Editar só este
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditScope('this_and_future')}
-                  className={cn(
-                    'px-2 py-1 rounded text-sm font-medium',
-                    editScope === 'this_and_future' ? 'bg-amber-200' : 'bg-white border border-amber-300 hover:bg-amber-100'
-                  )}
-                >
-                  Editar este e futuros
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditScope('all')}
-                  className={cn(
-                    'px-2 py-1 rounded text-sm font-medium',
-                    editScope === 'all' ? 'bg-amber-200' : 'bg-white border border-amber-300 hover:bg-amber-100'
-                  )}
-                >
-                  Editar todos
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Tipo de lançamento (Único, Fixo, Parcelado) */}
           {!transaction?.group_id && (
             <div>
@@ -790,6 +761,32 @@ export function TransactionFormModal({
     <>
       <div className="fixed inset-0 z-40 bg-black/50 md:block" onClick={handleRequestClose} aria-hidden />
       {content}
+      {scopeModalValues && groupInfo && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="scope-modal-title">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-4 space-y-4">
+            <h3 id="scope-modal-title" className="text-lg font-semibold text-surface-900">
+              Como aplicar as alterações?
+            </h3>
+            <p className="text-sm text-surface-600">
+              Este lançamento faz parte de um grupo: <strong>{groupInfo.name}</strong> (parcela {groupInfo.current} de {groupInfo.total}).
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button variant="primary" className="w-full" onClick={() => handleScopeChoice('this_only')}>
+                Editar só este
+              </Button>
+              <Button variant="secondary" className="w-full" onClick={() => handleScopeChoice('this_and_future')}>
+                Editar este e futuros
+              </Button>
+              <Button variant="secondary" className="w-full" onClick={() => handleScopeChoice('all')}>
+                Editar todos
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => setScopeModalValues(null)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       {showExitConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="exit-confirm-title">
           <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-4 space-y-4">

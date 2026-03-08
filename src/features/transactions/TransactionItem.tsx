@@ -130,6 +130,17 @@ export function TransactionItem({
           {transaction.type === 'expense' ? '-' : '+'}
           {formatCurrencyFromCents(transaction.amount)}
         </p>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
+          className="shrink-0 hidden sm:flex p-2 rounded-lg text-surface-400 hover:text-red-600 hover:bg-red-50"
+          aria-label="Excluir"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </div>
     </div>
   )
