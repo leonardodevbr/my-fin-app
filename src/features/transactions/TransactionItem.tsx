@@ -136,24 +136,22 @@ export function TransactionItem({
           {categoryName?.charAt(0) ?? '?'}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-semibold text-surface-900 truncate">{transaction.description}</p>
+          <p className="font-semibold text-surface-900 truncate">{transaction.description}</p>
+          <p className="text-xs text-surface-500 truncate">{accountName}</p>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <span className="text-xs text-surface-500 lg:hidden">{formatDate(transaction.date)}</span>
             {paymentMode === 'recurring' && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-surface-100 px-1.5 py-0.5 text-[10px] font-medium text-surface-600" title="Recorrente">
-                <Repeat className="h-3 w-3" />
+              <span className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[10px] text-surface-400" title="Recorrente">
+                <Repeat className="h-2.5 w-2.5" />
                 Fixo
               </span>
             )}
             {paymentMode === 'installments' && installmentsTotal != null && installmentsTotal >= 2 && transaction.installment_number != null && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-surface-100 px-1.5 py-0.5 text-[10px] font-medium text-surface-600" title="Parcelado">
-                <Package className="h-3 w-3" />
+              <span className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[10px] text-surface-400" title="Parcelado">
+                <Package className="h-2.5 w-2.5" />
                 {transaction.installment_number}/{installmentsTotal}
               </span>
             )}
-          </div>
-          <p className="text-xs text-surface-500 truncate">{accountName}</p>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <span className="text-xs text-surface-500 lg:hidden">{formatDate(transaction.date)}</span>
             {transaction.tags?.length > 0 &&
               transaction.tags.slice(0, 3).map((tag) => (
                 <span
