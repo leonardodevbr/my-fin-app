@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
-import { Check, Trash2 } from 'lucide-react'
+import { Check, Trash2, Repeat, Package } from 'lucide-react'
 import type { Transaction } from '../../db'
+import type { PaymentMode } from '../../db/schema'
 import { formatCurrencyFromCents, formatDate } from '../../lib/utils'
 import { cn } from '../../lib/utils'
 
@@ -14,6 +15,13 @@ export interface TransactionItemProps {
   onEdit: () => void
   onTogglePaid: () => void
   onDelete: () => void
+  /** Modo seleção múltipla: exibe checkbox para selecionar a linha */
+  selectionMode?: boolean
+  selected?: boolean
+  onToggleSelect?: () => void
+  /** Tipo de transação (do grupo): exibe indicador Fixo / Parcelado 1/3 */
+  paymentMode?: PaymentMode | null
+  installmentsTotal?: number | null
 }
 
 export function TransactionItem({
@@ -24,6 +32,11 @@ export function TransactionItem({
   onEdit,
   onTogglePaid,
   onDelete,
+  selectionMode,
+  selected,
+  onToggleSelect,
+  paymentMode,
+  installmentsTotal,
 }: TransactionItemProps) {
   const [dragX, setDragX] = useState(0)
   const startX = useRef(0)
@@ -84,25 +97,37 @@ export function TransactionItem({
         onTouchEnd={handleTouchEnd}
         onClick={onEdit}
       >
+        {selectionMode && onToggleSelect && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleSelect()
+            }}
+            className={cn(
+              'shrink-0 flex items-center justify-center h-5 w-5 rounded border-2 transition-colors',
+              selected ? 'border-primary-500 bg-primary-500 text-white' : 'border-surface-300'
+            )}
+            aria-label={selected ? 'Desmarcar' : 'Selecionar'}
+          >
+            {selected && <Check className="h-3 w-3" />}
+          </button>
+        )}
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation()
             onTogglePaid()
           }}
-          className="shrink-0 rounded-full p-1 hover:bg-surface-100"
+          className={cn(
+            'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
+            transaction.is_paid
+              ? 'bg-primary-100 text-primary-700 hover:bg-primary-200'
+              : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
+          )}
           aria-label={transaction.is_paid ? 'Marcar como não pago' : 'Marcar como pago'}
         >
-          <div
-            className={cn(
-              'h-6 w-6 rounded-full border-2 flex items-center justify-center',
-              transaction.is_paid
-                ? 'border-primary-500 bg-primary-500 text-white'
-                : 'border-surface-300'
-            )}
-          >
-            {transaction.is_paid && <Check className="h-3.5 w-3.5" />}
-          </div>
+          {transaction.is_paid ? 'Pago' : 'A pagar'}
         </button>
         <div
           className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center text-white text-sm font-medium"
@@ -111,7 +136,21 @@ export function TransactionItem({
           {categoryName?.charAt(0) ?? '?'}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-surface-900 truncate">{transaction.description}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-semibold text-surface-900 truncate">{transaction.description}</p>
+            {paymentMode === 'recurring' && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-surface-100 px-1.5 py-0.5 text-[10px] font-medium text-surface-600" title="Recorrente">
+                <Repeat className="h-3 w-3" />
+                Fixo
+              </span>
+            )}
+            {paymentMode === 'installments' && installmentsTotal != null && installmentsTotal >= 2 && transaction.installment_number != null && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-surface-100 px-1.5 py-0.5 text-[10px] font-medium text-surface-600" title="Parcelado">
+                <Package className="h-3 w-3" />
+                {transaction.installment_number}/{installmentsTotal}
+              </span>
+            )}
+          </div>
           <p className="text-xs text-surface-500 truncate">{accountName}</p>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span className="text-xs text-surface-500 lg:hidden">{formatDate(transaction.date)}</span>

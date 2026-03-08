@@ -76,6 +76,10 @@ export function TransactionsPage() {
     hasGroup: boolean
   } | null>(null)
 
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+
   const defaultTypeForNew: 'income' | 'expense' | 'transfer' =
     filter === 'income' || filter === 'expense' || filter === 'transfer' ? filter : 'expense'
 
@@ -167,6 +171,48 @@ export function TransactionsPage() {
     setTransactionMonth(toMonthKey(d))
   }
 
+  const handleToggleSelect = (id: string, selected: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (selected) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
+  const handleBulkMarkPaid = async () => {
+    const ids = Array.from(selectedIds)
+    try {
+      for (const id of ids) {
+        await updateTransaction(id, { is_paid: true })
+      }
+      toast.success(ids.length === 1 ? 'Marcada como paga' : `${ids.length} transações marcadas como pagas`)
+      setSelectedIds(new Set())
+      setSelectionMode(false)
+    } catch {
+      toast.error('Erro ao atualizar')
+    }
+  }
+
+  const handleBulkDeleteClick = () => {
+    setBulkDeleteOpen(true)
+  }
+
+  const confirmBulkDelete = async () => {
+    const ids = Array.from(selectedIds)
+    try {
+      for (const id of ids) {
+        await deleteTransaction(id)
+      }
+      toast.success(ids.length === 1 ? 'Transação excluída' : `${ids.length} transações excluídas`)
+      setSelectedIds(new Set())
+      setSelectionMode(false)
+      setBulkDeleteOpen(false)
+    } catch {
+      toast.error('Erro ao excluir')
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -189,7 +235,18 @@ export function TransactionsPage() {
         </Button>
       </div>
 
-      <TransactionFilters value={filter} onChange={setFilter} />
+      <div className="flex flex-wrap items-center gap-2">
+        <TransactionFilters value={filter} onChange={setFilter} />
+        {!selectionMode ? (
+          <Button variant="secondary" size="sm" onClick={() => setSelectionMode(true)}>
+            Selecionar
+          </Button>
+        ) : (
+          <Button variant="ghost" size="sm" onClick={() => { setSelectionMode(false); setSelectedIds(new Set()) }}>
+            Cancelar seleção
+          </Button>
+        )}
+      </div>
 
       <input
         type="search"
@@ -204,6 +261,12 @@ export function TransactionsPage() {
         onEdit={handleEdit}
         onTogglePaid={handleTogglePaid}
         onDelete={handleDeleteClick}
+        selectionMode={selectionMode}
+        selectedIds={selectedIds}
+        onToggleSelect={selectionMode ? handleToggleSelect : undefined}
+        onBulkMarkPaid={selectionMode && selectedIds.size > 0 ? handleBulkMarkPaid : undefined}
+        onBulkDelete={selectionMode && selectedIds.size > 0 ? handleBulkDeleteClick : undefined}
+        onCancelSelection={selectionMode ? () => { setSelectionMode(false); setSelectedIds(new Set()) } : undefined}
       />
 
       <TransactionFormModal
@@ -235,7 +298,27 @@ export function TransactionsPage() {
         <Plus className="h-6 w-6" />
       </button>
 
-      {/* Delete confirm */}
+      {/* Bulk delete confirm */}
+      {bulkDeleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="w-full max-w-sm rounded-xl bg-white p-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-surface-900">Excluir transações?</h3>
+            <p className="mt-2 text-sm text-surface-600">
+              {selectedIds.size} {selectedIds.size === 1 ? 'transação será excluída' : 'transações serão excluídas'}. Esta ação não pode ser desfeita.
+            </p>
+            <div className="mt-4 flex flex-col gap-2">
+              <Button variant="danger" onClick={confirmBulkDelete} className="w-full">
+                Excluir
+              </Button>
+              <Button variant="ghost" onClick={() => setBulkDeleteOpen(false)} className="w-full">
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm (single) */}
       {deleteState && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="w-full max-w-sm rounded-xl bg-white p-4 shadow-xl">

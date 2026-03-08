@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import type { Transaction } from '../../db'
+import { db } from '../../db'
 import { formatCurrencyFromCents, cn } from '../../lib/utils'
 import { useAccounts } from '../../hooks/useAccounts'
 import { useCategories } from '../../hooks/useCategories'
@@ -15,6 +17,12 @@ export interface TransactionListProps {
   onEdit: (t: Transaction) => void
   onTogglePaid: (t: Transaction) => void
   onDelete: (t: Transaction) => void
+  selectionMode?: boolean
+  selectedIds?: Set<string>
+  onToggleSelect?: (id: string, selected: boolean) => void
+  onBulkMarkPaid?: () => void
+  onBulkDelete?: () => void
+  onCancelSelection?: () => void
 }
 
 function groupByDate(transactions: Transaction[]): { date: string; items: Transaction[]; dayTotal: number }[] {
@@ -41,10 +49,26 @@ export function TransactionList({
   onEdit,
   onTogglePaid,
   onDelete,
+  selectionMode,
+  selectedIds = new Set(),
+  onToggleSelect,
+  onBulkMarkPaid,
+  onBulkDelete,
+  onCancelSelection,
 }: TransactionListProps) {
   const [page, setPage] = useState(1)
   const accounts = useAccounts(false)
   const categories = useCategories()
+
+  const groupIds = useMemo(
+    () => [...new Set(transactions.map((t) => t.group_id).filter((id): id is string => id != null))],
+    [transactions]
+  )
+  const groupsList = useLiveQuery(
+    () => (groupIds.length > 0 ? db.transaction_groups.where('id').anyOf(groupIds).toArray() : Promise.resolve([])),
+    [groupIds.join(',')]
+  )
+  const groupMap = useMemo(() => new Map((groupsList ?? []).map((g) => [g.id, g])), [groupsList])
 
   const accountMap = useMemo(() => new Map(accounts.map((a) => [a.id, a.name])), [accounts])
   const categoryMap = useMemo(
@@ -84,8 +108,32 @@ export function TransactionList({
     )
   }
 
+  const selectedCount = selectedIds.size
+
   return (
     <div className="space-y-6">
+      {selectionMode && selectedCount > 0 && (
+        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-surface-200 bg-white px-3 py-2 shadow-sm">
+          <span className="text-sm font-medium text-surface-700">
+            {selectedCount} {selectedCount === 1 ? 'selecionada' : 'selecionadas'}
+          </span>
+          {onBulkMarkPaid && (
+            <Button variant="secondary" size="sm" onClick={onBulkMarkPaid}>
+              Marcar como pago
+            </Button>
+          )}
+          {onBulkDelete && (
+            <Button variant="danger" size="sm" onClick={onBulkDelete}>
+              Excluir
+            </Button>
+          )}
+          {onCancelSelection && (
+            <Button variant="ghost" size="sm" onClick={onCancelSelection}>
+              Cancelar
+            </Button>
+          )}
+        </div>
+      )}
       {visibleGroups.map(({ date, items, dayTotal }) => (
         <section key={date}>
           <div className="flex items-center justify-between mb-2 px-1">
@@ -113,6 +161,11 @@ export function TransactionList({
                   onEdit={() => onEdit(t)}
                   onTogglePaid={() => onTogglePaid(t)}
                   onDelete={() => onDelete(t)}
+                  selectionMode={selectionMode}
+                  selected={selectedIds.has(t.id)}
+                  onToggleSelect={onToggleSelect ? () => onToggleSelect(t.id, !selectedIds.has(t.id)) : undefined}
+                  paymentMode={t.group_id ? groupMap.get(t.group_id)?.payment_mode : null}
+                  installmentsTotal={t.group_id ? groupMap.get(t.group_id)?.installments_total ?? null : null}
                 />
               </li>
             ))}
