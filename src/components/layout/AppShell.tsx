@@ -54,8 +54,7 @@ export function AppShell({ children }: AppShellProps) {
           <div className="flex-1 lg:flex-none flex items-center lg:hidden">
             <AppLogo height={30} className="max-h-11" />
           </div>
-          <div className="flex items-center gap-2 text-surface-500 text-sm">
-            <NotificationBell />
+          <div className="flex-1 flex items-center justify-end gap-2 text-surface-500 text-sm">
             {syncing && <span>Sincronizando…</span>}
             {!syncing && last_synced && (
               <span className="flex items-center gap-1.5">
@@ -75,6 +74,7 @@ export function AppShell({ children }: AppShellProps) {
               </span>
             )}
             {error && <span className="text-red-500" title={error}>Erro</span>}
+            <NotificationBell />
           </div>
         </header>
         <main className="min-w-0 overflow-x-hidden pb-20 lg:pb-6 px-4 lg:px-6 py-4">
