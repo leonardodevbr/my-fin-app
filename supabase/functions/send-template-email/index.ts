@@ -73,8 +73,10 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: 'Não autorizado' }, 401)
     }
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false }
+    })
     const { data: { user }, error: userError } = await supabase.auth.getUser(token)
     if (userError || !user?.email) {
       return jsonResponse({ error: 'Usuário não encontrado' }, 401)
