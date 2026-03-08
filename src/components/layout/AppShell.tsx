@@ -4,6 +4,7 @@ import { cn, formatRelativeTime } from '../../lib/utils'
 import { AppLogo } from './AppLogo'
 import { Sidebar } from './Sidebar'
 import { BottomNav } from './BottomNav'
+import { NotificationBell } from '../notifications/NotificationBell'
 import { useAppStore } from '../../store/appStore'
 import { useSyncStatus } from '../../sync/useSyncStatus'
 import { isSupabaseConfigured } from '../../lib/supabase'
@@ -54,6 +55,7 @@ export function AppShell({ children }: AppShellProps) {
             <AppLogo height={30} className="max-h-11" />
           </div>
           <div className="flex items-center gap-2 text-surface-500 text-sm">
+            <NotificationBell />
             {syncing && <span>Sincronizando…</span>}
             {!syncing && last_synced && (
               <span className="flex items-center gap-1.5">
