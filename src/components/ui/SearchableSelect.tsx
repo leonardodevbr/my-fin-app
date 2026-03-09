@@ -34,6 +34,7 @@ export function SearchableSelect<T extends string>({
   disabled,
 }: SearchableSelectProps<T>) {
   const [query, setQuery] = useState('')
+  const rootRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const filtered = useMemo(() => {
@@ -42,16 +43,50 @@ export function SearchableSelect<T extends string>({
     return options.filter((o) => o.label.toLowerCase().includes(q))
   }, [options, query])
 
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      e.stopPropagation()
+      if (filtered.length === 1) {
+        const nextValue = filtered[0].value
+        // Deixa o Headless UI processar o evento primeiro; depois atualiza o valor e pula para o próximo select
+        setTimeout(() => {
+          onChange(nextValue)
+          const allRoots = Array.from(
+            document.querySelectorAll<HTMLDivElement>('[data-searchable-select-root="true"]')
+          )
+          const visibleRoots = allRoots.filter((el) => {
+            const rect = el.getBoundingClientRect()
+            return rect.width > 0 && rect.height > 0 && el.offsetParent !== null
+          })
+          const currentIndex = visibleRoots.findIndex((el) => el === rootRef.current)
+          const nextRoot = currentIndex >= 0 ? visibleRoots[currentIndex + 1] : null
+          if (nextRoot) {
+            const nextTrigger = nextRoot.querySelector<HTMLButtonElement>(
+              '[data-searchable-select-trigger="true"]'
+            )
+            if (nextTrigger) {
+              nextTrigger.focus()
+              nextTrigger.click()
+            }
+          }
+        }, 0)
+      }
+      return
+    }
+  }
+
   const selected = options.find((o) => o.value === value)
 
   return (
-    <div>
+    <div ref={rootRef} data-searchable-select-root="true">
       {label && (
         <label className="block text-sm font-medium text-surface-700 mb-1">{label}</label>
       )}
       <Listbox value={value} onChange={onChange} disabled={disabled}>
         <div className="relative">
           <Listbox.Button
+            data-searchable-select-trigger="true"
             onClick={() => {
               setQuery('')
               setTimeout(() => searchInputRef.current?.focus(), 50)
@@ -87,7 +122,7 @@ export function SearchableSelect<T extends string>({
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={searchPlaceholder}
                 className="w-full rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm text-surface-900 placeholder:text-surface-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                onKeyDown={(e) => e.stopPropagation()}
+                onKeyDown={handleSearchKeyDown}
               />
             </div>
             <div className="py-1">
