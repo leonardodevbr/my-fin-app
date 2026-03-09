@@ -70,6 +70,12 @@ export function SubscriptionPage() {
         return
       }
 
+      const cpfDigits = cardHolderDocument?.replace(/\D/g, '') ?? ''
+      if (cpfDigits.length !== 11) {
+        toast.error('CPF do titular é obrigatório (11 dígitos) para pagamento com cartão.')
+        return
+      }
+
       const year = yy.length === 2 ? `20${yy}` : yy
 
       let brand: string
@@ -91,7 +97,7 @@ export function SubscriptionPage() {
             expirationMonth: mm,
             expirationYear: year,
             holderName: cardHolderName || user?.email || '',
-            holderDocument: cardHolderDocument ? cardHolderDocument.replace(/\D/g, '') : '',
+            holderDocument: cpfDigits,
             reuse: false,
           })
           .getPaymentToken()
@@ -105,7 +111,7 @@ export function SubscriptionPage() {
             cardMask,
             customer: {
               name: cardHolderName || user?.email || '',
-              cpf: cardHolderDocument || undefined,
+              cpf: cpfDigits,
               email: user?.email ?? '',
             },
           },
@@ -371,14 +377,15 @@ export function SubscriptionPage() {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="block text-xs font-medium text-surface-600">CPF do titular (opcional)</label>
+                  <label className="block text-xs font-medium text-surface-600">CPF do titular (obrigatório)</label>
                   <input
                     type="text"
                     inputMode="numeric"
                     value={cardHolderDocument}
                     onChange={(e) => setCardHolderDocument(e.target.value)}
                     className="w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                    placeholder="Somente números"
+                    placeholder="11 dígitos, somente números"
+                    maxLength={14}
                   />
                 </div>
                 <button

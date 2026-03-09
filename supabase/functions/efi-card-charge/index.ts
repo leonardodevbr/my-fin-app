@@ -79,6 +79,14 @@ Deno.serve(async (req) => {
     })
   }
 
+  const cpf = body.customer?.cpf?.replace(/\D/g, '')
+  if (!cpf || cpf.length !== 11) {
+    return new Response(JSON.stringify({ error: 'CPF do titular é obrigatório para pagamento com cartão (11 dígitos).' }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+
   try {
     const accessToken = await getBillingToken()
 
@@ -106,8 +114,8 @@ Deno.serve(async (req) => {
           credit_card: {
             customer: {
               name: body.customer?.name ?? user.email ?? 'Cliente NunFi',
-              cpf: body.customer?.cpf,
-              email: body.customer?.email ?? user.email,
+              cpf,
+              email: body.customer?.email ?? user.email ?? '',
             },
             installments: 1,
             payment_token: body.paymentToken,
