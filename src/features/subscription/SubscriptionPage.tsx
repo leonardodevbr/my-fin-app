@@ -17,6 +17,24 @@ const FEATURES = [
   'Sincronização multi-dispositivo',
 ]
 
+function formatCardNumber(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 16)
+  return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim()
+}
+
+function formatExpiry(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 4)
+  if (digits.length >= 2) return `${digits.slice(0, 2)}/${digits.slice(2)}`
+  return digits
+}
+
+function formatCpf(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  if (digits.length <= 3) return digits
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
+}
+
 export function SubscriptionPage() {
   const { user } = useAuth()
   const { lastNotification, clearNotification } = usePusher(user?.id)
@@ -340,9 +358,10 @@ export function SubscriptionPage() {
                     inputMode="numeric"
                     autoComplete="cc-number"
                     value={cardNumber}
-                    onChange={(e) => setCardNumber(e.target.value)}
+                    onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
                     className="w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                     placeholder="0000 0000 0000 0000"
+                    maxLength={19}
                   />
                 </div>
                 <div className="space-y-1">
@@ -364,9 +383,10 @@ export function SubscriptionPage() {
                       inputMode="numeric"
                       autoComplete="cc-exp"
                       value={cardExpiry}
-                      onChange={(e) => setCardExpiry(e.target.value)}
+                      onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
                       className="w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                       placeholder="MM/AA"
+                      maxLength={5}
                     />
                   </div>
                   <div className="w-24 space-y-1">
@@ -376,9 +396,10 @@ export function SubscriptionPage() {
                       inputMode="numeric"
                       autoComplete="cc-csc"
                       value={cardCvv}
-                      onChange={(e) => setCardCvv(e.target.value)}
+                      onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
                       className="w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                       placeholder="123"
+                      maxLength={4}
                     />
                   </div>
                 </div>
@@ -388,9 +409,9 @@ export function SubscriptionPage() {
                     type="text"
                     inputMode="numeric"
                     value={cardHolderDocument}
-                    onChange={(e) => setCardHolderDocument(e.target.value)}
+                    onChange={(e) => setCardHolderDocument(formatCpf(e.target.value))}
                     className="w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                    placeholder="11 dígitos, somente números"
+                    placeholder="000.000.000-00"
                     maxLength={14}
                   />
                 </div>
