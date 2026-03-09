@@ -29,9 +29,9 @@ export function BottomNav() {
               key={to}
               to={to}
               className={cn(
-                'flex flex-col items-center justify-center flex-1 py-2 transition-colors min-w-0',
+                'flex flex-col items-center justify-center flex-1 py-2 transition-colors min-w-0 rounded-lg outline-none focus:outline-none focus:ring-0',
                 active
-                  ? 'text-primary-600 font-medium'
+                  ? 'text-primary-600 font-medium bg-primary-50'
                   : 'text-surface-500 hover:text-primary-600'
               )}
             >

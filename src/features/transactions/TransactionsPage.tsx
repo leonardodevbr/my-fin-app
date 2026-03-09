@@ -239,7 +239,7 @@ export function TransactionsPage() {
               variant="ghost"
               size="sm"
               onClick={() => setSelectionMode(true)}
-              className="inline-flex"
+              className="inline-flex outline-none focus:outline-none focus:ring-0"
               aria-label="Selecionar transações"
             >
               <CheckSquare className="h-4 w-4 mr-1.5" />

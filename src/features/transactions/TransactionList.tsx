@@ -112,7 +112,7 @@ export function TransactionList({
   const selectedCount = selectedIds.size
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 sm:pb-0">
       {selectionMode && selectedCount > 0 && (
         <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-surface-200 bg-white px-3 py-2 shadow-sm">
           <span className="text-sm font-medium text-surface-700">

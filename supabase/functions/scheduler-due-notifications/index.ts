@@ -54,11 +54,44 @@ async function hmacSha256(secret: string, message: string): Promise<string> {
   return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
-async function md5Hex(message: string): Promise<string> {
-  const { createHash } = await import('https://deno.land/std@0.224.0/crypto/mod.ts')
-  const hash = createHash('md5')
-  hash.update(message)
-  return hash.toString()
+// MD5 puro em JS (sem dependências externas)
+function md5Hex(message: string): string {
+  function safeAdd(x: number, y: number) { const lsw=(x&0xFFFF)+(y&0xFFFF); return (((x>>16)+(y>>16)+(lsw>>16))<<16)|(lsw&0xFFFF) }
+  function bitRotateLeft(num: number, cnt: number) { return (num<<cnt)|(num>>>(32-cnt)) }
+  function md5cmn(q:number,a:number,b:number,x:number,s:number,t:number){return safeAdd(bitRotateLeft(safeAdd(safeAdd(a,q),safeAdd(x,t)),s),b)}
+  function md5ff(a:number,b:number,c:number,d:number,x:number,s:number,t:number){return md5cmn((b&c)|((~b)&d),a,b,x,s,t)}
+  function md5gg(a:number,b:number,c:number,d:number,x:number,s:number,t:number){return md5cmn((b&d)|(c&(~d)),a,b,x,s,t)}
+  function md5hh(a:number,b:number,c:number,d:number,x:number,s:number,t:number){return md5cmn(b^c^d,a,b,x,s,t)}
+  function md5ii(a:number,b:number,c:number,d:number,x:number,s:number,t:number){return md5cmn(c^(b|(~d)),a,b,x,s,t)}
+  const bytes = new TextEncoder().encode(message)
+  const len8 = bytes.length
+  const len32 = Math.ceil((len8+9)/64)*16
+  const M = new Int32Array(len32)
+  for(let i=0;i<len8;i++) M[i>>2]|=bytes[i]<<((i%4)*8)
+  M[len8>>2]|=0x80<<((len8%4)*8)
+  M[len32-2]=len8*8
+  let a=1732584193,b=-271733879,c=-1732584194,d=271733878
+  for(let i=0;i<len32;i+=16){
+    const [A,B,C,D]=[a,b,c,d]
+    a=md5ff(a,b,c,d,M[i],7,-680876936);d=md5ff(d,a,b,c,M[i+1],12,-389564586);c=md5ff(c,d,a,b,M[i+2],17,606105819);b=md5ff(b,c,d,a,M[i+3],22,-1044525330)
+    a=md5ff(a,b,c,d,M[i+4],7,-176418897);d=md5ff(d,a,b,c,M[i+5],12,1200080426);c=md5ff(c,d,a,b,M[i+6],17,-1473231341);b=md5ff(b,c,d,a,M[i+7],22,-45705983)
+    a=md5ff(a,b,c,d,M[i+8],7,1770035416);d=md5ff(d,a,b,c,M[i+9],12,-1958414417);c=md5ff(c,d,a,b,M[i+10],17,-42063);b=md5ff(b,c,d,a,M[i+11],22,-1990404162)
+    a=md5ff(a,b,c,d,M[i+12],7,1804603682);d=md5ff(d,a,b,c,M[i+13],12,-40341101);c=md5ff(c,d,a,b,M[i+14],17,-1502002290);b=md5ff(b,c,d,a,M[i+15],22,1236535329)
+    a=md5gg(a,b,c,d,M[i+1],5,-165796510);d=md5gg(d,a,b,c,M[i+6],9,-1069501632);c=md5gg(c,d,a,b,M[i+11],14,643717713);b=md5gg(b,c,d,a,M[i],20,-373897302)
+    a=md5gg(a,b,c,d,M[i+5],5,-701558691);d=md5gg(d,a,b,c,M[i+10],9,38016083);c=md5gg(c,d,a,b,M[i+15],14,-660478335);b=md5gg(b,c,d,a,M[i+4],20,-405537848)
+    a=md5gg(a,b,c,d,M[i+9],5,568446438);d=md5gg(d,a,b,c,M[i+14],9,-1019803690);c=md5gg(c,d,a,b,M[i+3],14,-187363961);b=md5gg(b,c,d,a,M[i+8],20,1163531501)
+    a=md5gg(a,b,c,d,M[i+13],5,-1444681467);d=md5gg(d,a,b,c,M[i+2],9,-51403784);c=md5gg(c,d,a,b,M[i+7],14,1735328473);b=md5gg(b,c,d,a,M[i+12],20,-1926607734)
+    a=md5hh(a,b,c,d,M[i+5],4,-378558);d=md5hh(d,a,b,c,M[i+8],11,-2022574463);c=md5hh(c,d,a,b,M[i+11],16,1839030562);b=md5hh(b,c,d,a,M[i+14],23,-35309556)
+    a=md5hh(a,b,c,d,M[i+1],4,-1530992060);d=md5hh(d,a,b,c,M[i+4],11,1272893353);c=md5hh(c,d,a,b,M[i+7],16,-155497632);b=md5hh(b,c,d,a,M[i+10],23,-1094730640)
+    a=md5hh(a,b,c,d,M[i+13],4,681279174);d=md5hh(d,a,b,c,M[i],11,-358537222);c=md5hh(c,d,a,b,M[i+3],16,-722521979);b=md5hh(b,c,d,a,M[i+6],23,76029189)
+    a=md5hh(a,b,c,d,M[i+9],4,-640364487);d=md5hh(d,a,b,c,M[i+12],11,-421815835);c=md5hh(c,d,a,b,M[i+15],16,530742520);b=md5hh(b,c,d,a,M[i+2],23,-995338651)
+    a=md5ii(a,b,c,d,M[i],6,-198630844);d=md5ii(d,a,b,c,M[i+7],10,1126891415);c=md5ii(c,d,a,b,M[i+14],15,-1416354905);b=md5ii(b,c,d,a,M[i+5],21,-57434055)
+    a=md5ii(a,b,c,d,M[i+12],6,1700485571);d=md5ii(d,a,b,c,M[i+3],10,-1894986606);c=md5ii(c,d,a,b,M[i+10],15,-1051523);b=md5ii(b,c,d,a,M[i+1],21,-2054922799)
+    a=md5ii(a,b,c,d,M[i+8],6,1873313359);d=md5ii(d,a,b,c,M[i+15],10,-30611744);c=md5ii(c,d,a,b,M[i+6],15,-1560198380);b=md5ii(b,c,d,a,M[i+13],21,1309151649)
+    a=md5ii(a,b,c,d,M[i+4],6,-145523070);d=md5ii(d,a,b,c,M[i+11],10,-1120210379);c=md5ii(c,d,a,b,M[i+2],15,718787259);b=md5ii(b,c,d,a,M[i+9],21,-343485551)
+    a=safeAdd(a,A);b=safeAdd(b,B);c=safeAdd(c,C);d=safeAdd(d,D)
+  }
+  return [a,b,c,d].map(n=>(n>>>0).toString(16).padStart(8,'0').match(/../g)!.reverse().join('')).join('')
 }
 
 // ─── VAPID JWT para Web Push ──────────────────────────────────────────────────
@@ -77,10 +110,26 @@ async function buildVapidJwt(audience: string): Promise<string> {
   )
   const signingInput = `${header}.${payload}`
 
-  const privateKeyBytes = base64UrlToUint8Array(VAPID_PRIVATE_KEY)
+  // Public key VAPID é um ponto EC não-comprimido: 0x04 + X(32 bytes) + Y(32 bytes) = 65 bytes
+  // Decodifica e extrai X e Y para montar o JWK
+  const pubKeyBytes = base64UrlToUint8Array(VAPID_PUBLIC_KEY)
+  // pubKeyBytes[0] == 0x04 (uncompressed point marker)
+  const x = uint8ArrayToBase64Url(pubKeyBytes.slice(1, 33))
+  const y = uint8ArrayToBase64Url(pubKeyBytes.slice(33, 65))
+
   const key = await crypto.subtle.importKey(
-    'raw', privateKeyBytes,
-    { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']
+    'jwk',
+    {
+      kty: 'EC',
+      crv: 'P-256',
+      d: VAPID_PRIVATE_KEY,
+      x,
+      y,
+      key_ops: ['sign'],
+    },
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['sign']
   )
   const signature = await crypto.subtle.sign(
     { name: 'ECDSA', hash: 'SHA-256' },
@@ -115,21 +164,27 @@ async function sendWebPush(userId: string, count: number, supabase: ReturnType<t
 
   for (const row of subs as { subscription: { endpoint: string; keys: { p256dh: string; auth: string } }; endpoint: string }[]) {
     try {
-      const { endpoint, keys } = row.subscription
+      const sub = row.subscription
+      const endpoint = sub.endpoint
+      const p256dh = sub.keys.p256dh
+      const auth = sub.keys.auth
+
+      // Cifra o payload usando ECDH + AES-128-GCM (RFC 8291)
+      const encrypted = await encryptWebPush(payload, p256dh, auth)
+
       const url = new URL(endpoint)
       const audience = `${url.protocol}//${url.host}`
       const jwt = await buildVapidJwt(audience)
 
-      // Cifra o payload com ECDH + AES-GCM (Web Push encryption)
-      // Para simplicidade e confiabilidade, usa endpoint FCM diretamente sem body encryption
-      // O FCM aceita push sem body encryption se o payload for omitido
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `vapid t=${jwt},k=${VAPID_PUBLIC_KEY}`,
           'TTL': '86400',
+          'Content-Encoding': 'aes128gcm',
           'Content-Type': 'application/octet-stream',
         },
+        body: encrypted,
       })
 
       if (res.ok || res.status === 201) {
@@ -146,6 +201,78 @@ async function sendWebPush(userId: string, count: number, supabase: ReturnType<t
       console.error(`[WebPush] Erro: ${e instanceof Error ? e.message : e}`)
     }
   }
+}
+
+// ─── RFC 8291: Web Push payload encryption (aes128gcm) ───────────────────────
+
+async function encryptWebPush(payload: string, p256dhBase64: string, authBase64: string): Promise<Uint8Array> {
+  const encoder = new TextEncoder()
+  const payloadBytes = encoder.encode(payload)
+
+  // 1. Decodifica chaves do receptor
+  const receiverPublicKey = base64UrlToUint8Array(p256dhBase64)
+  const authSecret = base64UrlToUint8Array(authBase64)
+
+  // 2. Gera par de chaves efêmero (sender)
+  const senderKeyPair = await crypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveKey', 'deriveBits']
+  )
+
+  // 3. Importa chave pública do receptor para ECDH
+  const receiverKey = await crypto.subtle.importKey(
+    'raw', receiverPublicKey, { name: 'ECDH', namedCurve: 'P-256' }, false, []
+  )
+
+  // 4. Deriva shared secret via ECDH
+  const sharedSecret = await crypto.subtle.deriveBits(
+    { name: 'ECDH', public: receiverKey }, senderKeyPair.privateKey, 256
+  )
+
+  // 5. Exporta chave pública efêmera (65 bytes, uncompressed)
+  const senderPublicKeyRaw = await crypto.subtle.exportKey('raw', senderKeyPair.publicKey)
+  const senderPublicKey = new Uint8Array(senderPublicKeyRaw)
+
+  // 6. Gera salt aleatório (16 bytes)
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+
+  // 7. HKDF para derivar IKM (RFC 8291 section 3.3)
+  const prk = await hkdf(
+    new Uint8Array(sharedSecret),
+    authSecret,
+    concat(encoder.encode('WebPush: info '), receiverPublicKey, senderPublicKey),
+    32
+  )
+
+  // 8. HKDF para derivar CEK e NONCE
+  const cek = await hkdf(prk, salt, encoder.encode('Content-Encoding: aes128gcm '), 16)
+  const nonce = await hkdf(prk, salt, encoder.encode('Content-Encoding: nonce '), 12)
+
+  // 9. Cifra com AES-128-GCM
+  const aesKey = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt'])
+  const paddedPayload = concat(payloadBytes, new Uint8Array([0x02])) // padding delimiter
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: nonce }, aesKey, paddedPayload
+  )
+
+  // 10. Monta o record (RFC 8291): salt(16) + rs(4) + keyid_len(1) + keyid(65) + ciphertext
+  const rs = new Uint8Array(4)
+  new DataView(rs.buffer).setUint32(0, paddedPayload.length + 16 + 1, false) // record size
+  const keyIdLen = new Uint8Array([senderPublicKey.length])
+  return concat(salt, rs, keyIdLen, senderPublicKey, new Uint8Array(ciphertext))
+}
+
+async function hkdf(ikm: Uint8Array, salt: Uint8Array, info: Uint8Array, length: number): Promise<Uint8Array> {
+  const key = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits'])
+  const bits = await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, key, length * 8)
+  return new Uint8Array(bits)
+}
+
+function concat(...arrays: Uint8Array[]): Uint8Array {
+  const total = arrays.reduce((acc, a) => acc + a.length, 0)
+  const result = new Uint8Array(total)
+  let offset = 0
+  for (const a of arrays) { result.set(a, offset); offset += a.length }
+  return result
 }
 
 // ─── Pusher ───────────────────────────────────────────────────────────────────
@@ -283,9 +410,16 @@ Deno.serve(async (req: Request) => {
     const results = await Promise.allSettled(
       Array.from(byUser.values()).map(async ({ userId, email, items }) => {
         console.log(`[Scheduler] Processando user=${userId}`)
-        await triggerPusher(userId, items.length)
-        await sendWebPush(userId, items.length, supabase)
-        await sendEmail(email, items)
+
+        try { await triggerPusher(userId, items.length) }
+        catch (e) { console.error(`[Pusher] Excecao: ${e instanceof Error ? e.message : e}`) }
+
+        try { await sendWebPush(userId, items.length, supabase) }
+        catch (e) { console.error(`[WebPush] Excecao: ${e instanceof Error ? e.message : e}`) }
+
+        try { await sendEmail(email, items) }
+        catch (e) { console.error(`[Resend] Excecao: ${e instanceof Error ? e.message : e}`) }
+
         return { userId, count: items.length }
       })
     )

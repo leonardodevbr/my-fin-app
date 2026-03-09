@@ -109,7 +109,7 @@ export function TransactionItem({
               onToggleSelect()
             }}
             className={cn(
-              'shrink-0 flex items-center justify-center h-5 w-5 rounded border-2 transition-colors',
+              'shrink-0 flex items-center justify-center h-5 w-5 rounded border-2 transition-colors outline-none focus:outline-none focus:ring-0',
               selected ? 'border-primary-500 bg-primary-500 text-white' : 'border-surface-300'
             )}
             aria-label={selected ? 'Desmarcar' : 'Selecionar'}
@@ -128,8 +128,9 @@ export function TransactionItem({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap gap-y-0.5">
-            <p className="font-semibold text-surface-900 truncate">{transaction.description}</p>
+          <p className="font-semibold text-surface-900 line-clamp-2 break-words">{transaction.description}</p>
+          <div className="flex items-center gap-2 flex-wrap gap-y-0.5 mt-0.5">
+            <p className="text-xs text-surface-500 truncate min-w-0">{accountName}</p>
             {paymentMode === 'recurring' && (
               <span className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-surface-100 px-1.5 py-0.5 text-[10px] font-medium text-surface-500" title="Recorrente">
                 <Repeat className="h-2.5 w-2.5" />
@@ -143,7 +144,6 @@ export function TransactionItem({
               </span>
             )}
           </div>
-          <p className="text-xs text-surface-500 truncate">{accountName}</p>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span className="text-xs text-surface-500 lg:hidden">{formatDate(transaction.date)}</span>
             {transaction.tags?.length > 0 &&
