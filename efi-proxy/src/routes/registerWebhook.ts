@@ -21,10 +21,15 @@ registerWebhookRouter.post('/', async (req: Request, res: Response) => {
 
     console.log(`[register-webhook] Registrando URL na Efi: ${webhookUrl}`)
 
+    const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
+    if (process.env.EFI_SANDBOX === 'true') {
+      headers['x-skip-mtls-checking'] = 'true'
+    }
+
     const putRes = await client.put(
       `/v2/webhook/${encodeURIComponent(pixKey)}`,
       { webhookUrl },
-      { headers: { Authorization: `Bearer ${token}` } }
+      { headers }
     )
 
     const raw = typeof putRes.data === 'string' ? putRes.data : JSON.stringify(putRes.data)
