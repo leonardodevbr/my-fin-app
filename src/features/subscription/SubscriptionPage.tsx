@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Crown, CheckCircle, Copy, RefreshCw, QrCode, Clock, Zap } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useAuth } from '../../hooks/useAuth'
+import { usePusher } from '../../hooks/usePusher'
 import { useSubscription } from '../../hooks/useSubscription'
 import { getSupabase } from '../../lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
@@ -15,9 +17,11 @@ const FEATURES = [
 ]
 
 export function SubscriptionPage() {
+  const { user } = useAuth()
+  const { lastNotification, clearNotification } = usePusher(user?.id)
   const sub = useSubscription()
   const [generating, setGenerating] = useState(false)
-  const [polling, setPolling] = useState(false)
+  const [checking, setChecking] = useState(false)
   const [pixData, setPixData] = useState<{
     pixCopiaECola: string
     qrCodeImage: string | null
@@ -46,9 +50,9 @@ export function SubscriptionPage() {
   }
 
   const checkPayment = async () => {
-    setPolling(true)
+    setChecking(true)
     await sub.refresh()
-    setPolling(false)
+    setChecking(false)
     if (sub.isProActive) {
       toast.success('Assinatura ativada! 🎉')
       setPixData(null)
@@ -56,6 +60,16 @@ export function SubscriptionPage() {
       toast('Pagamento ainda não confirmado. Aguarde alguns segundos.', { icon: '⏳' })
     }
   }
+
+  // Push em tempo real: quando o webhook confirma o PIX, Pusher dispara e atualizamos na hora
+  useEffect(() => {
+    if (lastNotification?.type !== 'subscription-activated') return
+    sub.refresh().then(() => {
+      toast.success('Pagamento confirmado! Assinatura ativada 🎉')
+      setPixData(null)
+      clearNotification()
+    })
+  }, [lastNotification?.type])
 
   if (sub.loading) {
     return (
@@ -148,11 +162,11 @@ export function SubscriptionPage() {
                 </p>
                 <button
                   onClick={checkPayment}
-                  disabled={polling}
+                  disabled={checking}
                   className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-60"
                 >
-                  <RefreshCw className={`h-4 w-4 ${polling ? 'animate-spin' : ''}`} />
-                  {polling ? 'Verificando...' : 'Já paguei — verificar'}
+                  <RefreshCw className={`h-4 w-4 ${checking ? 'animate-spin' : ''}`} />
+                  {checking ? 'Verificando...' : 'Já paguei — verificar'}
                 </button>
                 <button
                   onClick={() => setPixData(null)}

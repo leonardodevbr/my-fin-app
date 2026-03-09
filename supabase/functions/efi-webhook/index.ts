@@ -57,6 +57,21 @@ Deno.serve(async (req) => {
 
       console.log(`[Webhook] Assinatura ativada user=${payment.user_id} até ${periodEnd.toISOString()}`)
 
+      // Push em tempo real para o app (Pusher)
+      const pusherUrl = `${SUPABASE_URL}/functions/v1/trigger-pusher`
+      await fetch(pusherUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({
+          userId: payment.user_id,
+          event: 'subscription-activated',
+          data: { message: 'Assinatura Pro ativada!', type: 'subscription-activated' },
+        }),
+      }).catch((e) => console.warn('[Webhook] Pusher:', e))
+
       // Email de confirmação
       const { data: { user } } = await supabase.auth.admin.getUserById(payment.user_id)
       if (user?.email) {
