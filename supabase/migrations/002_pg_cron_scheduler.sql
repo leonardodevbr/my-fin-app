@@ -1,6 +1,8 @@
 -- =============================================================================
 -- pg_cron: agenda notificações automáticas de transações a vencer
--- Executar no SQL Editor do Supabase
+-- Executar no SQL Editor do Supabase.
+-- Antes de rodar: substitua SEU_SERVICE_ROLE_KEY_AQUI pela Service Role Key
+-- (Project Settings > API > service_role, secret).
 -- =============================================================================
 
 -- 1. Habilita as extensões necessárias
