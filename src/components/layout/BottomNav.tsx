@@ -12,13 +12,14 @@ const navItems = [
 ]
 
 function isNavActive(pathname: string, to: string): boolean {
-  if (to === '/') return pathname === '/' || pathname === ''
-  return pathname === to || pathname.startsWith(to + '/')
+  const normalized = pathname === '' ? '/' : pathname
+  if (to === '/') return normalized === '/'
+  return normalized === to
 }
 
 export function BottomNav() {
   const { pathname } = useLocation()
-  const currentPath = (pathname || '/').replace(/^#/, '') || '/'
+  const currentPath = (pathname ?? '').replace(/^#/, '') || '/'
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-surface-200 safe-area-pb">

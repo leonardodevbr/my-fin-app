@@ -1,14 +1,17 @@
 import { Crown, X } from 'lucide-react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useSubscription } from '../../hooks/useSubscription'
 
 export function TrialBanner() {
+  const location = useLocation()
+  const pathname = (location.pathname || '').replace(/^#/, '') || '/'
+  const isSubscriptionPage = pathname === '/subscription' || pathname.startsWith('/subscription/')
   const { isTrialActive, isProActive, daysRemaining, loading, hasAccess } = useSubscription()
   const [dismissed, setDismissed] = useState(false)
   const navigate = useNavigate()
 
-  if (loading || isProActive || dismissed) return null
+  if (loading || isProActive || dismissed || isSubscriptionPage) return null
 
   const isExpired = !hasAccess
   const isUrgent = isTrialActive && daysRemaining <= 7

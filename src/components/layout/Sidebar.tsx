@@ -33,15 +33,16 @@ const navItems = [
 ]
 
 function isNavActive(pathname: string, to: string): boolean {
-  if (to === '/') return pathname === '/' || pathname === ''
-  return pathname === to || pathname.startsWith(to + '/')
+  const normalized = pathname === '' ? '/' : pathname
+  if (to === '/') return normalized === '/'
+  return normalized === to
 }
 
 export function Sidebar() {
   const { sidebarOpen, setSidebarOpen } = useAppStore()
   const { pathname } = useLocation()
   const { signOut } = useAuth()
-  const currentPath = (pathname || '/').replace(/^#/, '') || '/'
+  const currentPath = (pathname ?? '').replace(/^#/, '') || '/'
 
   return (
     <>
