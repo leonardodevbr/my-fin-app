@@ -19,10 +19,11 @@ Deno.serve(async (req) => {
     })
 
   try {
-    const webhookUrl = `${EFI_PROXY_URL.replace(/\/$/, '')}/efi-webhook`
+    const proxyBase = new URL(EFI_PROXY_URL).origin
+    const webhookUrl = `${proxyBase}/efi-webhook`
     console.log('[efi-register-webhook] Chamando proxy para registrar:', webhookUrl)
 
-    const res = await fetch(`${EFI_PROXY_URL}/register-webhook`, {
+    const res = await fetch(`${proxyBase}/register-webhook`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
