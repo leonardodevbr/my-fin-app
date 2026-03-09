@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express'
 import { chargeRouter } from './routes/charge'
 import { healthRouter } from './routes/health'
+import { registerWebhookRouter } from './routes/registerWebhook'
 
 const app = express()
 app.use(express.json())
@@ -20,6 +21,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 app.use('/health', healthRouter)
 app.use('/charge', chargeRouter)
+app.use('/register-webhook', registerWebhookRouter)
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('[server] Erro:', err.message)
