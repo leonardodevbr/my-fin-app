@@ -161,7 +161,7 @@ export function SubscriptionPage() {
                 name: cardHolderName || user?.email || '',
                 cpf: cpfDigits,
                 email: user?.email ?? '',
-                phone_number: cardHolderPhone ? `+55${cardHolderPhone.replace(/\D/g, '')}` : undefined,
+                phone_number: cardHolderPhone ? cardHolderPhone.replace(/\D/g, '') : undefined,
                 address: {
                   zipcode: addressZip.replace(/\D/g, ''),
                   street: addressStreet.trim(),

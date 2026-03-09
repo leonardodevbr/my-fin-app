@@ -167,7 +167,11 @@ Deno.serve(async (req) => {
               name: body.customer?.name ?? user.email ?? 'Cliente NunFi',
               cpf,
               email: body.customer?.email ?? user.email ?? '',
-              phone_number: body.customer?.phone_number ?? user.phone ?? '+5511999999999',
+              phone_number: (() => {
+              const raw = body.customer?.phone_number ?? user.phone ?? '11999999999'
+              const digits = raw.replace(/\D/g, '')
+              return digits.length >= 10 ? digits.slice(-11) : '11999999999'
+            })(),
               address: billingAddress,
             },
             billing_address: billingAddress,
