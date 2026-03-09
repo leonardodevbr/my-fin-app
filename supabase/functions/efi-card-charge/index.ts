@@ -24,7 +24,7 @@ const cors = {
 
 async function getBillingToken(): Promise<string> {
   const creds = btoa(`${EFI_BILLING_CLIENT_ID}:${EFI_BILLING_CLIENT_SECRET}`)
-  const url = `${EFI_BILLING_BASE_URL}/oauth/token`
+  const url = `${EFI_BILLING_BASE_URL}/v1/authorize`
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -95,7 +95,13 @@ Deno.serve(async (req) => {
   const body = (await req.json().catch(() => ({}))) as {
     paymentToken?: string
     cardMask?: string
-    customer?: { name?: string; cpf?: string; email?: string }
+    customer?: {
+      name?: string
+      cpf?: string
+      email?: string
+      phone_number?: string
+      address?: { street?: string; number?: string; neighborhood?: string; zipcode?: string; city?: string; complement?: string; state?: string }
+    }
   }
 
   if (!body.paymentToken) {
@@ -111,6 +117,25 @@ Deno.serve(async (req) => {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
+  }
+
+  const addr = body.customer?.address
+  const zipcode = addr?.zipcode?.replace(/\D/g, '') ?? ''
+  if (!addr?.street?.trim() || !addr?.number?.trim() || !addr?.neighborhood?.trim() || zipcode.length !== 8 || !addr?.city?.trim() || !addr?.state?.trim()) {
+    return new Response(
+      JSON.stringify({ error: 'Endereço completo é obrigatório: CEP, rua, número, bairro, cidade e estado.' }),
+      { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } },
+    )
+  }
+
+  const billingAddress = {
+    street: addr.street.trim(),
+    number: addr.number.trim(),
+    neighborhood: addr.neighborhood.trim(),
+    zipcode: zipcode,
+    city: addr.city.trim(),
+    complement: addr.complement?.trim() ?? '',
+    state: addr.state.trim().toUpperCase().slice(0, 2),
   }
 
   try {
@@ -142,7 +167,10 @@ Deno.serve(async (req) => {
               name: body.customer?.name ?? user.email ?? 'Cliente NunFi',
               cpf,
               email: body.customer?.email ?? user.email ?? '',
+              phone_number: body.customer?.phone_number ?? user.phone ?? '+5511999999999',
+              address: billingAddress,
             },
+            billing_address: billingAddress,
             installments: 1,
             payment_token: body.paymentToken,
           },

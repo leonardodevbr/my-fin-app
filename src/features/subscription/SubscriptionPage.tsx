@@ -51,6 +51,14 @@ export function SubscriptionPage() {
   const [cardHolderDocument, setCardHolderDocument] = useState('')
   const [cardExpiry, setCardExpiry] = useState('') // MM/AA
   const [cardCvv, setCardCvv] = useState('')
+  const [cardHolderPhone, setCardHolderPhone] = useState('')
+  const [addressZip, setAddressZip] = useState('')
+  const [addressStreet, setAddressStreet] = useState('')
+  const [addressNumber, setAddressNumber] = useState('')
+  const [addressNeighborhood, setAddressNeighborhood] = useState('')
+  const [addressCity, setAddressCity] = useState('')
+  const [addressState, setAddressState] = useState('')
+  const [addressComplement, setAddressComplement] = useState('')
   const [pixData, setPixData] = useState<{
     pixCopiaECola: string
     qrCodeImage: string | null
@@ -93,6 +101,18 @@ export function SubscriptionPage() {
       const cpfDigits = cardHolderDocument?.replace(/\D/g, '') ?? ''
       if (cpfDigits.length !== 11) {
         toast.error('CPF do titular é obrigatório (11 dígitos) para pagamento com cartão.')
+        return
+      }
+
+      const phoneDigits = cardHolderPhone.replace(/\D/g, '')
+      if (phoneDigits.length < 10) {
+        toast.error('Telefone é obrigatório (DDD + número, ex.: 11999999999).')
+        return
+      }
+
+      const zipDigits = addressZip.replace(/\D/g, '')
+      if (zipDigits.length !== 8 || !addressStreet.trim() || !addressNumber.trim() || !addressNeighborhood.trim() || !addressCity.trim() || !addressState.trim()) {
+        toast.error('Preencha o endereço completo: CEP, rua, número, bairro, cidade e estado.')
         return
       }
 
@@ -141,6 +161,16 @@ export function SubscriptionPage() {
                 name: cardHolderName || user?.email || '',
                 cpf: cpfDigits,
                 email: user?.email ?? '',
+                phone_number: cardHolderPhone ? `+55${cardHolderPhone.replace(/\D/g, '')}` : undefined,
+                address: {
+                  zipcode: addressZip.replace(/\D/g, ''),
+                  street: addressStreet.trim(),
+                  number: addressNumber.trim(),
+                  neighborhood: addressNeighborhood.trim(),
+                  city: addressCity.trim(),
+                  state: addressState.trim().toUpperCase().slice(0, 2),
+                  complement: addressComplement.trim() || undefined,
+                },
               },
             },
           })
@@ -436,6 +466,97 @@ export function SubscriptionPage() {
                     placeholder="000.000.000-00"
                     maxLength={14}
                   />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-surface-600">Telefone (obrigatório para cartão)</label>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={cardHolderPhone}
+                    onChange={(e) => setCardHolderPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                    className="w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                    placeholder="11999999999"
+                    maxLength={11}
+                  />
+                </div>
+                <div className="border-t border-surface-200 pt-3">
+                  <p className="mb-2 text-xs font-medium text-surface-600">Endereço (obrigatório para cartão)</p>
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={addressZip}
+                        onChange={(e) => setAddressZip(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                        onBlur={async (e) => {
+                          const z = (e.target as HTMLInputElement).value.replace(/\D/g, '')
+                          if (z.length !== 8) return
+                          try {
+                            const r = await fetch(`https://viacep.com.br/ws/${z}/json/`)
+                            const data = await r.json()
+                            if (!data.erro) {
+                              setAddressStreet(data.logradouro ?? '')
+                              setAddressNeighborhood(data.bairro ?? '')
+                              setAddressCity(data.localidade ?? '')
+                              setAddressState(data.uf ?? '')
+                            }
+                          } catch {
+                            // ignora erro de CEP
+                          }
+                        }}
+                        className="w-28 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                        placeholder="CEP"
+                        maxLength={8}
+                      />
+                      <input
+                        type="text"
+                        value={addressStreet}
+                        onChange={(e) => setAddressStreet(e.target.value)}
+                        className="flex-1 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                        placeholder="Rua"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={addressNumber}
+                        onChange={(e) => setAddressNumber(e.target.value)}
+                        className="w-24 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                        placeholder="Nº"
+                      />
+                      <input
+                        type="text"
+                        value={addressNeighborhood}
+                        onChange={(e) => setAddressNeighborhood(e.target.value)}
+                        className="flex-1 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                        placeholder="Bairro"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={addressCity}
+                        onChange={(e) => setAddressCity(e.target.value)}
+                        className="flex-1 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                        placeholder="Cidade"
+                      />
+                      <input
+                        type="text"
+                        value={addressState}
+                        onChange={(e) => setAddressState(e.target.value.toUpperCase().slice(0, 2))}
+                        className="w-16 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                        placeholder="UF"
+                        maxLength={2}
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={addressComplement}
+                      onChange={(e) => setAddressComplement(e.target.value)}
+                      className="w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                      placeholder="Complemento (opcional)"
+                    />
+                  </div>
                 </div>
                 <button
                   type="submit"

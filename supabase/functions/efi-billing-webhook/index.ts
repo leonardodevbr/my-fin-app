@@ -16,7 +16,7 @@ const EFI_BILLING_CLIENT_SECRET = Deno.env.get('EFI_BILLING_CLIENT_SECRET')!
 
 async function getBillingToken(): Promise<string> {
   const creds = btoa(`${EFI_BILLING_CLIENT_ID}:${EFI_BILLING_CLIENT_SECRET}`)
-  const res = await fetch(`${EFI_BILLING_BASE_URL}/oauth/token`, {
+  const res = await fetch(`${EFI_BILLING_BASE_URL}/v1/authorize`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
