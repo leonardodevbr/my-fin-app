@@ -113,49 +113,74 @@ function toTransaction(r: Record<string, unknown>): Transaction {
   return rest as unknown as Transaction
 }
 
-export async function pullChanges(since: string): Promise<void> {
+/** Normaliza id para comparação (Supabase pode devolver UUID em formato diferente). */
+function normId(id: string | number): string {
+  return String(id ?? '').trim().toLowerCase()
+}
+
+export async function pullChanges(): Promise<void> {
   const supabase = getSupabase()
   if (!supabase) return
   const tables = ['accounts', 'categories', 'transaction_groups', 'transactions', 'budgets'] as const
   for (const tableName of tables) {
-    // Full-table sync: sempre busca todos os registros para espelhar o estado do Supabase.
-    // Isso permite detectar deleções (linhas que sumiram do Supabase) e removê-las do Dexie.
     const { data: remote, error } = await supabase.from(tableName).select('*')
     if (error) throw error
-    if (!remote || remote.length === 0) continue
+    const rows = (remote ?? []) as { id: string }[]
     const key = (r: { id: string }) => r.id
-    const remoteIds = new Set((remote as { id: string }[]).map((r) => r.id))
+    const remoteIds = new Set(rows.map((r) => normId(r.id)))
+    const emptyRemote = rows.length === 0
+
     if (tableName === 'accounts') {
-      const local = await db.accounts.toArray()
-      const merged = mergeByUpdatedAt(local, remote as Account[], key) as Account[]
-      const toDelete = local.filter((a) => a.synced_at && !remoteIds.has(a.id))
-      if (toDelete.length) await db.accounts.bulkDelete(toDelete.map((a) => a.id))
-      await db.accounts.bulkPut(merged)
+      if (emptyRemote) {
+        await db.accounts.clear()
+      } else {
+        const local = await db.accounts.toArray()
+        const merged = mergeByUpdatedAt(local, rows as Account[], key) as Account[]
+        const toDelete = local.filter((a) => !remoteIds.has(normId(a.id)))
+        if (toDelete.length) await db.accounts.bulkDelete(toDelete.map((a) => a.id))
+        await db.accounts.bulkPut(merged)
+      }
     } else if (tableName === 'categories') {
-      const local = await db.categories.toArray()
-      const merged = mergeByUpdatedAt(local, remote as Category[], key) as Category[]
-      const toDelete = local.filter((c) => c.synced_at && !remoteIds.has(c.id))
-      if (toDelete.length) await db.categories.bulkDelete(toDelete.map((c) => c.id))
-      await db.categories.bulkPut(merged)
+      if (emptyRemote) {
+        await db.categories.clear()
+      } else {
+        const local = await db.categories.toArray()
+        const merged = mergeByUpdatedAt(local, rows as Category[], key) as Category[]
+        const toDelete = local.filter((c) => !remoteIds.has(normId(c.id)))
+        if (toDelete.length) await db.categories.bulkDelete(toDelete.map((c) => c.id))
+        await db.categories.bulkPut(merged)
+      }
     } else if (tableName === 'transaction_groups') {
-      const local = await db.transaction_groups.toArray()
-      const merged = mergeByUpdatedAt(local, remote as TransactionGroup[], key) as TransactionGroup[]
-      const toDelete = local.filter((g) => g.synced_at && !remoteIds.has(g.id))
-      if (toDelete.length) await db.transaction_groups.bulkDelete(toDelete.map((g) => g.id))
-      await db.transaction_groups.bulkPut(merged)
+      if (emptyRemote) {
+        await db.transaction_groups.clear()
+      } else {
+        const local = await db.transaction_groups.toArray()
+        const merged = mergeByUpdatedAt(local, rows as TransactionGroup[], key) as TransactionGroup[]
+        const toDelete = local.filter((g) => !remoteIds.has(normId(g.id)))
+        if (toDelete.length) await db.transaction_groups.bulkDelete(toDelete.map((g) => g.id))
+        await db.transaction_groups.bulkPut(merged)
+      }
     } else if (tableName === 'transactions') {
-      const local = await db.transactions.toArray()
-      const remoteTx = (remote as Record<string, unknown>[]).map(toTransaction)
-      const merged = mergeByUpdatedAt(local, remoteTx, key) as Transaction[]
-      const toDelete = local.filter((t) => t.synced_at && !remoteIds.has(t.id))
-      if (toDelete.length) await db.transactions.bulkDelete(toDelete.map((t) => t.id))
-      await db.transactions.bulkPut(merged)
+      if (emptyRemote) {
+        await db.transactions.clear()
+      } else {
+        const local = await db.transactions.toArray()
+        const remoteTx = (rows as Record<string, unknown>[]).map(toTransaction)
+        const merged = mergeByUpdatedAt(local, remoteTx, key) as Transaction[]
+        const toDelete = local.filter((t) => !remoteIds.has(normId(t.id)))
+        if (toDelete.length) await db.transactions.bulkDelete(toDelete.map((t) => t.id))
+        await db.transactions.bulkPut(merged)
+      }
     } else if (tableName === 'budgets') {
-      const local = await db.budgets.toArray()
-      const merged = mergeByUpdatedAt(local, remote as Budget[], key) as Budget[]
-      const toDelete = local.filter((b) => b.synced_at && !remoteIds.has(b.id))
-      if (toDelete.length) await db.budgets.bulkDelete(toDelete.map((b) => b.id))
-      await db.budgets.bulkPut(merged)
+      if (emptyRemote) {
+        await db.budgets.clear()
+      } else {
+        const local = await db.budgets.toArray()
+        const merged = mergeByUpdatedAt(local, rows as Budget[], key) as Budget[]
+        const toDelete = local.filter((b) => !remoteIds.has(normId(b.id)))
+        if (toDelete.length) await db.budgets.bulkDelete(toDelete.map((b) => b.id))
+        await db.budgets.bulkPut(merged)
+      }
     }
   }
   setLastSync(new Date().toISOString())
@@ -163,8 +188,7 @@ export async function pullChanges(since: string): Promise<void> {
 
 export async function syncAll(): Promise<void> {
   if (!isSupabaseConfigured) return
-  const since = getLastSync()
-  await pullChanges(since)
+  await pullChanges()
   const { scheduleRecurringTransactions } = await import('./recurringScheduler')
   await scheduleRecurringTransactions()
   await pushChanges()

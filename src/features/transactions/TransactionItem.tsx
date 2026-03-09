@@ -190,8 +190,6 @@ export function TransactionItem({
             </p>
           </div>
         </div>
-       
-        
         <button
           type="button"
           onClick={(e) => {
