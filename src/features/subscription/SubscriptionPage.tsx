@@ -258,24 +258,30 @@ export function SubscriptionPage() {
                 </li>
               ))}
             </ul>
-            <div className="flex gap-2 rounded-lg bg-surface-50 p-1 text-xs font-medium">
+            <div className="flex gap-2 rounded-xl p-1.5 bg-surface-100">
               <button
                 type="button"
                 onClick={() => setMethod('pix')}
-                className={`flex-1 rounded-md px-3 py-1 ${
-                  method === 'pix' ? 'bg-white text-surface-900 shadow-sm' : 'text-surface-500'
+                className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
+                  method === 'pix'
+                    ? 'border-primary-400 bg-primary-50 text-primary-800 shadow-sm'
+                    : 'border-transparent bg-surface-200/60 text-surface-600 hover:bg-surface-200 hover:text-surface-700'
                 }`}
               >
+                <QrCode className="h-5 w-5 shrink-0" />
                 PIX
               </button>
               <button
                 type="button"
                 onClick={() => setMethod('card')}
-                className={`flex-1 rounded-md px-3 py-1 ${
-                  method === 'card' ? 'bg-white text-surface-900 shadow-sm' : 'text-surface-500'
+                className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
+                  method === 'card'
+                    ? 'border-primary-400 bg-primary-50 text-primary-800 shadow-sm'
+                    : 'border-transparent bg-surface-200/60 text-surface-600 hover:bg-surface-200 hover:text-surface-700'
                 }`}
               >
-                Cartão de crédito
+                <CreditCard className="h-5 w-5 shrink-0" />
+                Cartão
               </button>
             </div>
 
