@@ -37,8 +37,11 @@ async function getBillingToken(): Promise<string> {
   const raw = await res.text()
 
   if (!res.ok) {
-    console.error('[efi-card-charge] Erro ao obter token:', res.status, raw.slice(0, 500))
-    throw new Error('Falha ao autenticar na Efí (cartão)')
+    console.error('[efi-card-charge] Erro ao obter token. URL=', url, 'status=', res.status, 'body=', raw.slice(0, 500))
+    throw new Error(
+      `Falha ao autenticar na Efí (cartão). Ambiente/URL usada: ${EFI_BILLING_BASE_URL}. ` +
+        'Sandbox = cobrancas-h.api.efipay.com.br (credenciais de homologação). Produção = cobrancas.api.efipay.com.br (credenciais de produção). Defina EFI_BILLING_BASE_URL ou EFI_BILLING_ENV nas secrets da função.'
+    )
   }
 
   if (raw.trimStart().startsWith('<')) {
