@@ -1,4 +1,4 @@
-// Cobra o NunFí Pro (R$ 9,90) no cartão de crédito via API de Cobranças da Efí.
+// Cobra o NunFi Pro (R$ 9,90) no cartão de crédito via API de Cobranças da Efí.
 // Fluxo: front gera payment_token com payment-token-efi → chama esta função → esta função cria a cobrança one-step.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -25,13 +25,14 @@ const cors = {
 async function getBillingToken(): Promise<string> {
   const creds = btoa(`${EFI_BILLING_CLIENT_ID}:${EFI_BILLING_CLIENT_SECRET}`)
   const url = `${EFI_BILLING_BASE_URL}/v1/authorize`
+  // Documentação Efí usa JSON no body (exemplo PHP). Form-urlencoded pode dar 500 em produção.
   const res = await fetch(url, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
+      'Content-Type': 'application/json',
       Authorization: `Basic ${creds}`,
     },
-    body: new URLSearchParams({ grant_type: 'client_credentials' }).toString(),
+    body: JSON.stringify({ grant_type: 'client_credentials' }),
   })
 
   const raw = await res.text()
@@ -153,7 +154,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         items: [
           {
-            name: 'NunFí Pro – Assinatura mensal',
+            name: 'NunFi Pro – Assinatura mensal',
             value: AMOUNT_CENTS,
             amount: 1,
           },
@@ -164,7 +165,7 @@ Deno.serve(async (req) => {
         payment: {
           credit_card: {
             customer: {
-              name: body.customer?.name ?? user.email ?? 'Cliente NunFí',
+              name: body.customer?.name ?? user.email ?? 'Cliente NunFi',
               cpf,
               email: body.customer?.email ?? user.email ?? '',
               phone_number: (() => {
