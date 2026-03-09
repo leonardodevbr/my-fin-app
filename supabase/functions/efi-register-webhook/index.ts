@@ -38,25 +38,11 @@ async function getToken(): Promise<string> {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors })
 
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } })
+  // Pode ser chamada sem Authorization (uso administrativo/manual via painel/CLI)
+  // Apenas garante que os secrets estão configurados e registra o webhook.
+  createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } })
 
   try {
-    // Exige usuário autenticado só para evitar chamadas anônimas.
-    const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-    if (!token) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...cors, 'Content-Type': 'application/json' },
-      })
-    }
-    const { data: { user } } = await supabase.auth.getUser(token)
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...cors, 'Content-Type': 'application/json' },
-      })
-    }
-
     const accessToken = await getToken()
 
     const webhookUrl = `${SUPABASE_URL}/functions/v1/efi-webhook`
