@@ -136,21 +136,21 @@ export function TransactionList({
         </div>
       )}
       {visibleGroups.map(({ date, items, dayTotal }) => (
-        <section key={date}>
-          <div className="flex items-center justify-between mb-2 px-1">
+        <section key={date} className="space-y-2">
+          <header className="w-full flex items-center justify-between rounded-lg border border-surface-200 bg-surface-50 px-3 py-2">
             <h3 className="text-sm font-semibold text-surface-700">
               {format(new Date(date + 'T12:00:00'), "EEEE, d 'de' MMMM", { locale: ptBR })}
             </h3>
             <span
               className={cn(
-                'text-sm font-medium',
+                'text-sm font-medium tabular-nums',
                 dayTotal >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
               )}
             >
               {dayTotal >= 0 ? '+' : ''}
               {formatCurrencyFromCents(dayTotal)}
             </span>
-          </div>
+          </header>
           <ul className="space-y-2">
             {items.map((t) => (
               <li key={t.id}>

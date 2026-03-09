@@ -94,7 +94,12 @@ export function TransactionItem({
         </button>
       </div>
       <div
-        className="relative flex items-center gap-3 p-3 bg-white transition-transform"
+        className={cn(
+          'relative grid items-center gap-2 p-3 bg-white transition-transform w-full',
+          selectionMode
+            ? 'grid-cols-[auto_auto_minmax(0,1fr)_auto_auto]'
+            : 'grid-cols-[auto_minmax(0,1fr)_auto_auto]'
+        )}
         style={{ transform: `translateX(-${dragX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -109,7 +114,7 @@ export function TransactionItem({
               onToggleSelect()
             }}
             className={cn(
-              'shrink-0 flex items-center justify-center h-5 w-5 rounded border-2 transition-colors outline-none focus:outline-none focus:ring-0',
+              'flex items-center justify-center h-5 w-5 rounded border-2 transition-colors outline-none focus:outline-none focus:ring-0',
               selected ? 'border-primary-500 bg-primary-500 text-white' : 'border-surface-300'
             )}
             aria-label={selected ? 'Desmarcar' : 'Selecionar'}
@@ -118,7 +123,7 @@ export function TransactionItem({
           </button>
         )}
         <div
-          className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center text-white text-sm font-medium"
+          className="h-9 w-9 rounded-full flex items-center justify-center text-white text-sm font-medium"
           style={{ backgroundColor: categoryColor }}
         >
           {categoryIcon && CATEGORY_ICON_MAP[categoryIcon] ? (
@@ -127,8 +132,8 @@ export function TransactionItem({
             (categoryName?.charAt(0) ?? '?')
           )}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-surface-900 line-clamp-2 break-words">{transaction.description}</p>
+        <div className="min-w-0 overflow-hidden">
+          <p className="font-semibold text-surface-900 line-clamp-2">{transaction.description}</p>
           <div className="flex items-center gap-2 flex-wrap gap-y-0.5 mt-0.5">
             <p className="text-xs text-surface-500 truncate min-w-0">{accountName}</p>
             {paymentMode === 'recurring' && (
@@ -157,26 +162,28 @@ export function TransactionItem({
               ))}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onTogglePaid()
-          }}
-          className={cn(
-            'shrink-0 w-[4.5rem] rounded-full px-2 py-1 text-xs font-medium transition-colors text-center',
-            transaction.is_paid
-              ? 'bg-primary-100 text-primary-700 hover:bg-primary-200'
-              : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
-          )}
-          aria-label={transaction.is_paid ? 'Marcar como não pago' : 'Marcar como pago'}
-        >
-          {transaction.is_paid ? 'Pago' : 'A pagar'}
-        </button>
-        <p className={cn('shrink-0 font-semibold tabular-nums', amountColor)}>
-          {transaction.type === 'expense' ? '-' : '+'}
-          {formatCurrencyFromCents(transaction.amount)}
-        </p>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onTogglePaid()
+            }}
+            className={cn(
+              'rounded-full px-2 py-1 text-xs font-medium transition-colors text-center whitespace-nowrap',
+              transaction.is_paid
+                ? 'bg-primary-100 text-primary-700 hover:bg-primary-200'
+                : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
+            )}
+            aria-label={transaction.is_paid ? 'Marcar como não pago' : 'Marcar como pago'}
+          >
+            {transaction.is_paid ? 'Pago' : 'A pagar'}
+          </button>
+          <p className={cn('font-semibold tabular-nums', amountColor)}>
+            {transaction.type === 'expense' ? '-' : '+'}
+            {formatCurrencyFromCents(transaction.amount)}
+          </p>
+        </div>
         <button
           type="button"
           onClick={(e) => {

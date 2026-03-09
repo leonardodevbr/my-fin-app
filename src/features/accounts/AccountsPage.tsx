@@ -98,16 +98,17 @@ export function AccountsPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <ul className="flex flex-col gap-4 list-none p-0 m-0">
           {filteredAccounts.map((account) => (
-            <AccountCard
-              key={account.id}
-              account={account}
-              onEdit={handleEdit}
-              onArchive={handleArchive}
-            />
+            <li key={account.id}>
+              <AccountCard
+                account={account}
+                onEdit={handleEdit}
+                onArchive={handleArchive}
+              />
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       <AccountFormModal

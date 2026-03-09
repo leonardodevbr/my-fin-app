@@ -277,21 +277,21 @@ export function TransactionsPage() {
         className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-surface-900 placeholder:text-surface-400"
       />
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm">
-        <span className="font-medium text-surface-600">Receitas</span>
-        <span className="font-semibold tabular-nums text-[var(--color-income)]">
+      <div className="flex flex-nowrap items-center gap-x-2 overflow-x-auto rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm min-w-0">
+        <span className="font-medium text-surface-600 shrink-0">Receitas</span>
+        <span className="font-semibold tabular-nums text-[var(--color-income)] shrink-0">
           {formatCurrencyFromCents(periodTotals.income)}
         </span>
-        <span className="text-surface-400">/</span>
-        <span className="font-medium text-surface-600">Despesas</span>
-        <span className="font-semibold tabular-nums text-[var(--color-expense)]">
+        <span className="text-surface-400 shrink-0">/</span>
+        <span className="font-medium text-surface-600 shrink-0">Despesas</span>
+        <span className="font-semibold tabular-nums text-[var(--color-expense)] shrink-0">
           {formatCurrencyFromCents(periodTotals.expense)}
         </span>
         {periodTotals.transfer !== 0 && (
           <>
-            <span className="text-surface-400">/</span>
-            <span className="font-medium text-surface-600">Transferências</span>
-            <span className="font-semibold tabular-nums text-[var(--color-transfer)]">
+            <span className="text-surface-400 shrink-0">/</span>
+            <span className="font-medium text-surface-600 shrink-0">Transferências</span>
+            <span className="font-semibold tabular-nums text-[var(--color-transfer)] shrink-0">
               {formatCurrencyFromCents(periodTotals.transfer)}
             </span>
           </>

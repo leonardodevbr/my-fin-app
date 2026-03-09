@@ -21,7 +21,7 @@ const LUCIDE_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
 
 function AccountIcon({ icon }: { icon: string }) {
   const LucideIcon = LUCIDE_ICONS[icon]
-  if (LucideIcon) return <LucideIcon className="h-6 w-6 shrink-0" />
+  if (LucideIcon) return <LucideIcon className="h-7 w-7 shrink-0" />
   return <span className="text-2xl leading-none">{icon}</span>
 }
 
@@ -36,48 +36,48 @@ export function AccountCard({ account, onEdit, onArchive }: AccountCardProps) {
   const typeLabel = ACCOUNT_TYPE_LABELS[account.type]
 
   return (
-    <div
-      className="flex flex-col rounded-xl border border-surface-200 border-l-4 bg-white shadow-sm overflow-hidden min-h-[160px]"
+    <article
+      className="rounded-xl border border-surface-200 border-l-4 bg-white shadow-sm overflow-hidden"
       style={{ borderLeftColor: account.color }}
     >
-      <div className="flex flex-1 flex-col p-4">
-        <div className="flex items-start justify-between gap-2">
-          <Link to={`/accounts/${account.id}`} className="flex items-center gap-3 min-w-0 flex-1">
-            <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-surface-700"
-              style={{ backgroundColor: account.color + '20' }}
-            >
-              <AccountIcon icon={account.icon} />
-            </div>
-            <div className="min-w-0">
-              <p className="font-semibold text-surface-900 truncate">{account.name}</p>
-              <span className="inline-block mt-0.5 rounded bg-surface-100 px-1.5 py-0.5 text-xs font-medium text-surface-600">
-                {typeLabel}
-              </span>
-            </div>
-          </Link>
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={() => onEdit(account)}
-              className="rounded-lg p-2 text-surface-500 hover:bg-surface-100 hover:text-surface-700"
-              aria-label="Editar"
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onArchive(account)}
-              className="rounded-lg p-2 text-surface-500 hover:bg-surface-100 hover:text-surface-700"
-              aria-label="Arquivar"
-            >
-              <Archive className="h-4 w-4" />
-            </button>
-          </div>
+      <header className="flex items-start gap-3 p-4">
+        <div
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-surface-700"
+          style={{ backgroundColor: account.color + '20' }}
+        >
+          <AccountIcon icon={account.icon} />
         </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-semibold text-surface-900">
+            <Link to={`/accounts/${account.id}`} className="hover:underline">
+              {account.name}
+            </Link>
+          </h2>
+          <p className="mt-1 text-sm text-surface-600">{typeLabel}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onEdit(account)}
+            className="rounded-lg p-2 text-surface-500 hover:bg-surface-100 hover:text-surface-700"
+            aria-label="Editar"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onArchive(account)}
+            className="rounded-lg p-2 text-surface-500 hover:bg-surface-100 hover:text-surface-700"
+            aria-label="Arquivar"
+          >
+            <Archive className="h-4 w-4" />
+          </button>
+        </div>
+      </header>
+      <div className="border-t border-surface-100 px-4 py-3">
         <p
           className={cn(
-            'mt-3 text-xl font-bold tabular-nums',
+            'text-2xl font-bold tabular-nums',
             computedBalance >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
           )}
         >
@@ -85,11 +85,11 @@ export function AccountCard({ account, onEdit, onArchive }: AccountCardProps) {
         </p>
         <Link
           to={`/transactions?account=${account.id}`}
-          className="mt-2 text-sm font-medium text-primary-600 hover:text-primary-700"
+          className="mt-2 inline-block text-sm font-medium text-primary-600 hover:text-primary-700"
         >
           Ver lançamentos
         </Link>
       </div>
-    </div>
+    </article>
   )
 }
