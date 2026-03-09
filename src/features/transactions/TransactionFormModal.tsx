@@ -232,7 +232,12 @@ export function TransactionFormModal({
   }, [open])
 
   const accountOptions = useMemo(
-    () => accounts.map((a) => ({ value: a.id, label: a.name })),
+    () =>
+      accounts.map((a) => ({
+        value: a.id,
+        label: a.name,
+        color: a.color,
+      })),
     [accounts]
   )
 

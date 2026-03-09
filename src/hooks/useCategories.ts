@@ -6,7 +6,7 @@ import { generateId } from '../lib/utils'
 export function useCategories(type?: 'income' | 'expense') {
   const list = useLiveQuery(
     async () => {
-      let collection = db.categories.orderBy('name')
+      const collection = db.categories.orderBy('name')
       if (type) {
         return collection.filter((c) => c.type === type).toArray()
       }
