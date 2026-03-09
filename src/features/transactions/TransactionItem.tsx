@@ -45,6 +45,8 @@ export function TransactionItem({
   const [dragX, setDragX] = useState(0)
   const startX = useRef(0)
 
+  const displayDescription = transaction.description.replace(/\s*\*\s*$/, '')
+
   const amountColor =
     transaction.type === 'income'
       ? 'text-[var(--color-income)]'
@@ -97,8 +99,8 @@ export function TransactionItem({
         className={cn(
           'relative grid items-center gap-2 p-3 bg-white transition-transform w-full',
           selectionMode
-            ? 'grid-cols-[auto_auto_minmax(0,1fr)_auto_auto]'
-            : 'grid-cols-[auto_minmax(0,1fr)_auto_auto]'
+            ? 'grid-cols-[auto_auto_minmax(0,1fr)_auto_auto_auto]'
+            : 'grid-cols-[auto_minmax(0,1fr)_auto_auto_auto]'
         )}
         style={{ transform: `translateX(-${dragX}px)` }}
         onTouchStart={handleTouchStart}
@@ -132,58 +134,64 @@ export function TransactionItem({
             (categoryName?.charAt(0) ?? '?')
           )}
         </div>
-        <div className="min-w-0 overflow-hidden">
-          <p className="font-semibold text-surface-900 line-clamp-2">{transaction.description}</p>
-          <div className="flex items-center gap-2 flex-wrap gap-y-0.5 mt-0.5">
-            <p className="text-xs text-surface-500 truncate min-w-0">{accountName}</p>
-            {paymentMode === 'recurring' && (
-              <span className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-surface-100 px-1.5 py-0.5 text-[10px] font-medium text-surface-500" title="Recorrente">
-                <Repeat className="h-2.5 w-2.5" />
-                Fixo
-              </span>
-            )}
-            {paymentMode === 'installments' && installmentsTotal != null && installmentsTotal >= 1 && transaction.installment_number != null && (
-              <span className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-surface-100 px-1.5 py-0.5 text-[10px] font-medium text-surface-500" title="Parcelado">
-                <Package className="h-2.5 w-2.5" />
-                {transaction.installment_number}/{installmentsTotal}
-              </span>
-            )}
+        <div className="w-full flex flex-col gap-2">
+          <div className="w-full ml-3">
+            <p className="font-semibold text-surface-900 line-clamp-2">{displayDescription}</p>
           </div>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <span className="text-xs text-surface-500 lg:hidden">{formatDate(transaction.date)}</span>
-            {transaction.tags?.length > 0 &&
-              transaction.tags.slice(0, 3).map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] bg-surface-200 text-surface-600"
-                >
-                  {tag}
-                </span>
-              ))}
+          <div className="flex items-center justify-between ml-3 gap-2">
+            <div className="min-w-0 overflow-hidden">
+              <div className="flex items-center gap-2 flex-wrap gap-y-0.5 mt-0.5">
+                <p className="text-xs text-surface-500 truncate min-w-0">{accountName}</p>
+                {paymentMode === 'recurring' && (
+                  <span className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-surface-100 px-1.5 py-0.5 text-[10px] font-medium text-surface-500" title="Recorrente">
+                    <Repeat className="h-2.5 w-2.5" />
+                    Fixo
+                  </span>
+                )}
+                {paymentMode === 'installments' && installmentsTotal != null && installmentsTotal >= 1 && transaction.installment_number != null && (
+                  <span className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-surface-100 px-1.5 py-0.5 text-[10px] font-medium text-surface-500" title="Parcelado">
+                    <Package className="h-2.5 w-2.5" />
+                    {transaction.installment_number}/{installmentsTotal}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <span className="text-xs text-surface-500 lg:hidden">{formatDate(transaction.date)}</span>
+                {transaction.tags?.length > 0 &&
+                  transaction.tags.slice(0, 3).map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] bg-surface-200 text-surface-600"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onTogglePaid()
+              }}
+              className={cn(
+                'shrink-0 rounded-full px-2 py-1 text-xs font-medium transition-colors text-center whitespace-nowrap',
+                transaction.is_paid
+                  ? 'ml-auto bg-primary-100 text-primary-700 hover:bg-primary-200'
+                  : 'ml-auto bg-surface-100 text-surface-600 hover:bg-surface-200'
+              )}
+              aria-label={transaction.is_paid ? 'Marcar como não pago' : 'Marcar como pago'}
+            >
+              {transaction.is_paid ? 'Pago' : 'A pagar'}
+            </button>
+            <p className={cn('shrink-0 font-semibold tabular-nums', amountColor)}>
+              {transaction.type === 'expense' ? '-' : '+'}
+              {formatCurrencyFromCents(transaction.amount)}
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onTogglePaid()
-            }}
-            className={cn(
-              'rounded-full px-2 py-1 text-xs font-medium transition-colors text-center whitespace-nowrap',
-              transaction.is_paid
-                ? 'bg-primary-100 text-primary-700 hover:bg-primary-200'
-                : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
-            )}
-            aria-label={transaction.is_paid ? 'Marcar como não pago' : 'Marcar como pago'}
-          >
-            {transaction.is_paid ? 'Pago' : 'A pagar'}
-          </button>
-          <p className={cn('font-semibold tabular-nums', amountColor)}>
-            {transaction.type === 'expense' ? '-' : '+'}
-            {formatCurrencyFromCents(transaction.amount)}
-          </p>
-        </div>
+       
+        
         <button
           type="button"
           onClick={(e) => {

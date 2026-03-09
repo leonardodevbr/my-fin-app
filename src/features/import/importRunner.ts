@@ -1,6 +1,10 @@
 /**
  * Executes the import: creates categories, transaction_groups, transactions, sync_queue.
  * All writes inside a single Dexie transaction for atomicity.
+ *
+ * Grupos (parcelamento/recorrente): geram transações somente a partir do primeiro dia
+ * de abril do ano corrente, para não criar parcelas passadas (ex.: fev) que já foram
+ * pagas e devem constar apenas como lançamentos únicos na aba "transactions".
  */
 
 import { addMonths } from 'date-fns'
@@ -9,6 +13,12 @@ import type { Category, Transaction, TransactionGroup } from '../../db'
 import { generateId, toISODate } from '../../lib/utils'
 import { pushChanges } from '../../sync/syncEngine'
 import type { ParsedStandaloneTransaction, ParsedTransactionGroup } from './importParser'
+
+/** Primeiro dia de abril do ano corrente (YYYY-04-01). Grupos não geram parcelas antes desta data. */
+function getImportGroupCutoffDate(): string {
+  const year = new Date().getFullYear()
+  return `${year}-04-01`
+}
 
 export interface CategoryMapping {
   /** hint from spreadsheet (bloco/categoria) -> existing id or new category name */
@@ -230,6 +240,8 @@ export async function runImport(options: ImportRunOptions): Promise<ImportRunRes
         onProgress?.(processed, totalSteps)
       }
 
+      const groupCutoff = getImportGroupCutoffDate()
+
       for (const parsed of groups) {
         const category_id = resolveCategoryId(parsed.categoryHint, categoryMapping, newCategoryIds)
         const account_id = resolveAccountId(parsed.account_name, accountMapping, defaultAccountId)
@@ -237,6 +249,8 @@ export async function runImport(options: ImportRunOptions): Promise<ImportRunRes
           parsed.amount_total != null ? Math.round(parsed.amount_total * 100) : null
         const amount_per_installment_cents =
           parsed.amount_per_installment != null ? Math.round(parsed.amount_per_installment * 100) : null
+        const effectiveStartDate =
+          parsed.start_date < groupCutoff ? groupCutoff : parsed.start_date
         const group: TransactionGroup = {
           id: generateId(),
           user_id: userId,
@@ -250,7 +264,7 @@ export async function runImport(options: ImportRunOptions): Promise<ImportRunRes
           amount_per_installment: amount_per_installment_cents,
           recurrence_period: parsed.recurrence_period,
           recurrence_end_date: parsed.recurrence_end_date,
-          start_date: parsed.start_date,
+          start_date: effectiveStartDate,
           notes: null,
           tags: [],
           created_at: now,
@@ -293,17 +307,14 @@ export async function runImport(options: ImportRunOptions): Promise<ImportRunRes
         const category_id = resolveCategoryId(tx.categoryHint, categoryMapping, newCategoryIds)
         const account_id = resolveAccountId(tx.account_name, accountMapping, defaultAccountId)
         const amountCents = Math.round(tx.amount * 100)
-        // Evita duplicata: mesma data, descrição, valor e conta no mesmo mês
-        const existing = await db.transactions
-          .where('date')
-          .equals(tx.date)
-          .filter(
-            (r) =>
-              r.description === tx.description &&
-              r.amount === amountCents &&
-              r.account_id === account_id
-          )
-          .first()
+        const descNorm = (tx.description ?? '').trim()
+        const allSameDate = await db.transactions.where('date').equals(tx.date).toArray()
+        const existing = allSameDate.find(
+          (r) =>
+            (r.description ?? '').trim() === descNorm &&
+            r.amount === amountCents &&
+            r.account_id === account_id
+        )
         if (existing) {
           processed++
           onProgress?.(processed, totalSteps)
