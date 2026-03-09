@@ -11,6 +11,7 @@ import {
   LogOut,
   FileDown,
   TrendingUp,
+  Crown,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { AppLogo } from './AppLogo'
@@ -26,6 +27,7 @@ const navItems = [
   { to: '/reports', icon: BarChart3, label: 'Relatórios' },
   { to: '/projection', icon: TrendingUp, label: 'Projeção' },
   { to: '/budgets', icon: PiggyBank, label: 'Orçamentos' },
+  { to: '/subscription', icon: Crown, label: 'Assinatura' },
   { to: '/profile', icon: User, label: 'Perfil' },
   { to: '/import', icon: FileDown, label: 'Importar' },
 ]

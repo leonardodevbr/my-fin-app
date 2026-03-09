@@ -15,6 +15,8 @@ import { BudgetsPage } from './features/budgets/BudgetsPage'
 import { ProfilePage } from './features/profile/ProfilePage'
 import { ImportPage } from './features/import/ImportPage'
 import { ProjectionPage } from './features/projection/ProjectionPage'
+import { SubscriptionPage } from './features/subscription/SubscriptionPage'
+import { TrialBanner } from './features/subscription/TrialBanner'
 import { useAuth } from './hooks/useAuth'
 import { isSupabaseConfigured } from './lib/supabase'
 import { RecurringSchedulerInit } from './sync/RecurringSchedulerInit'
@@ -68,6 +70,7 @@ function App() {
               <WebPushInit />
               <RedirectAfterAuth />
               <AppShell>
+                <TrialBanner />
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/transactions" element={<TransactionsPage />} />
@@ -79,6 +82,7 @@ function App() {
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/import" element={<ImportPage />} />
                   <Route path="/projection" element={<ProjectionPage />} />
+                  <Route path="/subscription" element={<SubscriptionPage />} />
                 </Routes>
               </AppShell>
             </AuthGuard>
