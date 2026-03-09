@@ -28,6 +28,8 @@ jobs:
           echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" >> .env
           echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> .env
           echo "VITE_VAPID_PUBLIC_KEY=${{ secrets.VITE_VAPID_PUBLIC_KEY }}" >> .env
+          echo "VITE_EFI_PAYEE_CODE=${{ secrets.VITE_EFI_PAYEE_CODE }}" >> .env
+          echo "VITE_EFI_ENV=${{ secrets.VITE_EFI_ENV }}" >> .env
 
       - name: Build
         run: npm run build
