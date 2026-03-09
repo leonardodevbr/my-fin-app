@@ -130,17 +130,30 @@ export function SubscriptionPage() {
         const paymentToken = (result as { payment_token: string }).payment_token
         const cardMask = (result as { card_mask?: string }).card_mask
 
-        const { data, error } = await supabase.functions.invoke('efi-card-charge', {
-          body: {
-            paymentToken,
-            cardMask,
-            customer: {
-              name: cardHolderName || user?.email || '',
-              cpf: cpfDigits,
-              email: user?.email ?? '',
+        let data: { ok?: boolean; error?: string } | null = null
+        let error: Error | null = null
+        try {
+          const result = await supabase.functions.invoke('efi-card-charge', {
+            body: {
+              paymentToken,
+              cardMask,
+              customer: {
+                name: cardHolderName || user?.email || '',
+                cpf: cpfDigits,
+                email: user?.email ?? '',
+              },
             },
-          },
-        })
+          })
+          data = result.data
+          error = result.error
+        } catch (invokeErr: any) {
+          const m = invokeErr?.message ?? ''
+          if (m.includes('Unexpected token') || m.includes('is not valid JSON')) {
+            toast.error('Serviço de pagamento indisponível. Verifique a URL do Supabase no deploy e se a função efi-card-charge está publicada.')
+            return
+          }
+          throw invokeErr
+        }
 
         if (error || !data?.ok) {
           toast.error(data?.error ?? 'Pagamento não aprovado.')
