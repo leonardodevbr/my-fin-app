@@ -1,10 +1,10 @@
 // Supabase Edge Function: scheduler-due-notifications
 // Chamada pelo pg_cron todo dia às 8h (BRT).
 // Para cada usuário com transações a vencer nos próximos 14 dias:
-//   1. Dispara notificação via trigger-pusher (tempo real no app)
-//   2. Envia email via send-report-email (Resend)
+//   1. Dispara notificação Pusher (tempo real no app)
+//   2. Envia email via Resend
 //
-// Secrets necessários: RESEND_API_KEY, FROM_EMAIL, PUSHER_APP_ID, PUSHER_KEY, PUSHER_SECRET, PUSHER_CLUSTER
+// Secrets: RESEND_API_KEY, FROM_EMAIL, PUSHER_APP_ID, PUSHER_KEY, PUSHER_SECRET, PUSHER_CLUSTER
 // Chamada com: Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -18,7 +18,6 @@ const PUSHER_KEY = Deno.env.get('PUSHER_KEY')!
 const PUSHER_SECRET = Deno.env.get('PUSHER_SECRET')!
 const PUSHER_CLUSTER = Deno.env.get('PUSHER_CLUSTER') ?? 'sa1'
 
-// Quantos dias à frente buscar transações
 const DAYS_AHEAD = 14
 
 interface Transaction {
@@ -41,7 +40,7 @@ function jsonResponse(body: object, status: number) {
   })
 }
 
-// ─── Pusher auth (HMAC-SHA256) ───────────────────────────────────────────────
+// ─── Pusher auth (HMAC-SHA256 + MD5) ─────────────────────────────────────────
 
 async function hmacSha256(secret: string, message: string): Promise<string> {
   const key = await crypto.subtle.importKey(
@@ -58,8 +57,6 @@ async function hmacSha256(secret: string, message: string): Promise<string> {
 }
 
 async function md5Hex(message: string): Promise<string> {
-  // Deno não tem MD5 nativo — usa Web Crypto com SHA-1 não, então importamos via std
-  // Workaround: usa Uint8Array manualmente
   const { createHash } = await import('https://deno.land/std@0.224.0/crypto/mod.ts')
   const hash = createHash('md5')
   hash.update(message)
@@ -67,7 +64,6 @@ async function md5Hex(message: string): Promise<string> {
 }
 
 async function triggerPusher(userId: string, count: number): Promise<void> {
-  // Canal igual ao que usePusher.ts escuta: "user-${userId}"
   const channel = `user-${userId}`
   const eventName = 'due-transactions'
   const bodyObj = {
@@ -177,8 +173,6 @@ async function sendEmail(email: string, items: Transaction[]): Promise<void> {
 // ─── Handler principal ────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
-  // Só aceita chamadas autenticadas com a service role key
-  // (pg_cron vai passar no header Authorization)
   const authHeader = req.headers.get('Authorization')
   if (authHeader !== `Bearer ${SERVICE_ROLE_KEY}`) {
     return jsonResponse({ error: 'Unauthorized' }, 401)
@@ -189,25 +183,16 @@ Deno.serve(async (req: Request) => {
       auth: { persistSession: false },
     })
 
-    // Calcula o range de datas
     const today = new Date()
     const ahead = new Date()
     ahead.setDate(today.getDate() + DAYS_AHEAD)
     const todayStr = today.toISOString().split('T')[0]
     const aheadStr = ahead.toISOString().split('T')[0]
 
-    // Busca todas as transações a vencer (não pagas) com o email do usuário
-    // JOIN direto para evitar N+1 de chamadas auth.admin.getUserById
+    // 1. Busca transações a vencer — sem JOIN com auth.users (não suportado pelo PostgREST)
     const { data: rows, error } = await supabase
       .from('transactions')
-      .select(`
-        user_id,
-        description,
-        date,
-        amount,
-        type,
-        auth.users!inner ( email )
-      `)
+      .select('user_id, description, date, amount, type')
       .eq('is_paid', false)
       .gte('date', todayStr)
       .lte('date', aheadStr)
@@ -222,11 +207,22 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ ok: true, usersNotified: 0 }, 200)
     }
 
-    // Agrupa por usuário
+    // 2. Busca emails dos usuários únicos via admin API
+    const userIds = [...new Set(rows.map((r: any) => r.user_id as string))]
+    const emailMap = new Map<string, string>()
+
+    await Promise.all(
+      userIds.map(async (uid) => {
+        const { data } = await supabase.auth.admin.getUserById(uid)
+        if (data?.user?.email) emailMap.set(uid, data.user.email)
+      })
+    )
+
+    // 3. Agrupa transações por usuário
     const byUser = new Map<string, UserReport>()
     for (const row of rows as any[]) {
       const userId: string = row.user_id
-      const email: string = row['auth.users']?.email ?? row.users?.email ?? ''
+      const email = emailMap.get(userId) ?? ''
       if (!email) continue
 
       if (!byUser.has(userId)) {
@@ -242,7 +238,7 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[Scheduler] ${byUser.size} usuário(s) com transações a vencer.`)
 
-    // Dispara Pusher + Email para cada usuário
+    // 4. Dispara Pusher + Email para cada usuário
     const results = await Promise.allSettled(
       Array.from(byUser.values()).map(async ({ userId, email, items }) => {
         await triggerPusher(userId, items.length)
@@ -254,11 +250,7 @@ Deno.serve(async (req: Request) => {
     const succeeded = results.filter((r) => r.status === 'fulfilled').length
     const failed = results.filter((r) => r.status === 'rejected').length
 
-    return jsonResponse({
-      ok: true,
-      usersNotified: succeeded,
-      failed,
-    }, 200)
+    return jsonResponse({ ok: true, usersNotified: succeeded, failed }, 200)
 
   } catch (e) {
     console.error('[Scheduler] Erro inesperado:', e)
