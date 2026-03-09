@@ -24,10 +24,86 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json() as {
-      pix?: Array<{ txid: string; valor: string; horario: string; endToEndId: string }>
+      pix?: Array<{
+        txid: string
+        valor: string
+        horario: string
+        endToEndId?: string
+        devolucoes?: Array<{ id?: string; valor?: string; status?: string }>
+      }>
     }
 
     for (const pix of body.pix ?? []) {
+      const isRefund = Array.isArray(pix.devolucoes) && pix.devolucoes.some((d) => d.status === 'DEVOLVIDO')
+
+      if (isRefund) {
+        // Devolução/estorno: marca pagamento como reembolsado e cancela a assinatura
+        console.log(`[Webhook] Devolução PIX txid=${pix.txid} valor=R$${pix.valor}`)
+
+        const { data: payment } = await supabase
+          .from('payment_history')
+          .update({ status: 'refunded' })
+          .eq('efi_txid', pix.txid)
+          .eq('status', 'paid')
+          .select('user_id')
+          .single()
+
+        if (!payment) {
+          console.warn(`[Webhook] txid não encontrado ou já processado para devolução: ${pix.txid}`)
+          continue
+        }
+
+        const now = new Date().toISOString()
+        await supabase.from('user_subscriptions').update({
+          plan: 'free',
+          status: 'canceled',
+          current_period_end: now,
+          canceled_at: now,
+        }).eq('user_id', payment.user_id)
+
+        console.log(`[Webhook] Assinatura cancelada por devolução user=${payment.user_id}`)
+
+        const pusherUrl = `${SUPABASE_URL}/functions/v1/trigger-pusher`
+        await fetch(pusherUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({
+            userId: payment.user_id,
+            event: 'subscription-canceled',
+            data: { message: 'Assinatura cancelada (devolução PIX).', type: 'subscription-canceled' },
+          }),
+        }).catch((e) => console.warn('[Webhook] Pusher:', e))
+
+        const { data: { user } } = await supabase.auth.admin.getUserById(payment.user_id)
+        if (user?.email && RESEND_API_KEY) {
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${RESEND_API_KEY}`,
+            },
+            body: JSON.stringify({
+              from: FROM_EMAIL,
+              to: [user.email],
+              subject: 'NunFi Pro – Assinatura cancelada (devolução)',
+              html: `
+                <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+                  <h1 style="color:#0f172a">Assinatura cancelada</h1>
+                  <p>O pagamento referente ao seu plano <strong>NunFi Pro</strong> foi devolvido/estornado.</p>
+                  <p>Sua assinatura foi cancelada e o acesso ao Pro foi encerrado.</p>
+                  <p style="color:#64748b;font-size:14px">Para assinar novamente, acesse o app e gere um novo PIX.</p>
+                </div>
+              `,
+            }),
+          }).catch((e) => console.warn('[Webhook] Email devolução:', e))
+        }
+        continue
+      }
+
+      // Pagamento recebido (sem devolução)
       console.log(`[Webhook] PIX recebido txid=${pix.txid} valor=R$${pix.valor}`)
 
       const { data: payment } = await supabase
@@ -43,7 +119,6 @@ Deno.serve(async (req) => {
         continue
       }
 
-      // Ativa o plano Pro por 30 dias
       const now = new Date()
       const periodEnd = new Date(now)
       periodEnd.setDate(periodEnd.getDate() + 30)
@@ -57,7 +132,6 @@ Deno.serve(async (req) => {
 
       console.log(`[Webhook] Assinatura ativada user=${payment.user_id} até ${periodEnd.toISOString()}`)
 
-      // Push em tempo real para o app (Pusher)
       const pusherUrl = `${SUPABASE_URL}/functions/v1/trigger-pusher`
       await fetch(pusherUrl, {
         method: 'POST',
@@ -72,31 +146,32 @@ Deno.serve(async (req) => {
         }),
       }).catch((e) => console.warn('[Webhook] Pusher:', e))
 
-      // Email de confirmação
-      const { data: { user } } = await supabase.auth.admin.getUserById(payment.user_id)
-      if (user?.email) {
-        await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${RESEND_API_KEY}`,
-          },
-          body: JSON.stringify({
-            from: FROM_EMAIL,
-            to: [user.email],
-            subject: '✅ NunFi Pro ativado!',
-            html: `
-              <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
-                <h1 style="color:#10b981">Pagamento confirmado!</h1>
-                <p>Seu plano <strong>NunFi Pro</strong> está ativo até
-                   <strong>${periodEnd.toLocaleDateString('pt-BR')}</strong>.</p>
-                <p style="color:#64748b;font-size:14px">Valor: R$ ${parseFloat(pix.valor).toFixed(2)}</p>
-                <p>Obrigado por assinar o NunFi! 🎉</p>
-              </div>
-            `,
-          }),
-        })
-        console.log(`[Webhook] Email enviado para ${user.email}`)
+      if (RESEND_API_KEY) {
+        const { data: { user } } = await supabase.auth.admin.getUserById(payment.user_id)
+        if (user?.email) {
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${RESEND_API_KEY}`,
+            },
+            body: JSON.stringify({
+              from: FROM_EMAIL,
+              to: [user.email],
+              subject: '✅ NunFi Pro ativado!',
+              html: `
+                <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+                  <h1 style="color:#10b981">Pagamento confirmado!</h1>
+                  <p>Seu plano <strong>NunFi Pro</strong> está ativo até
+                     <strong>${periodEnd.toLocaleDateString('pt-BR')}</strong>.</p>
+                  <p style="color:#64748b;font-size:14px">Valor: R$ ${parseFloat(pix.valor).toFixed(2)}</p>
+                  <p>Obrigado por assinar o NunFi! 🎉</p>
+                </div>
+              `,
+            }),
+          })
+          console.log(`[Webhook] Email enviado para ${user.email}`)
+        }
       }
     }
 

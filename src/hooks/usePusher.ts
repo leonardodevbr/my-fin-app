@@ -48,11 +48,13 @@ export function usePusher(userId: string | undefined, options?: { enabled?: bool
     channel.bind('due-transactions', handler)
     channel.bind('my-event', handler)
     channel.bind('subscription-activated', handler)
+    channel.bind('subscription-canceled', handler)
 
     return () => {
       channel.unbind('due-transactions', handler)
       channel.unbind('my-event', handler)
       channel.unbind('subscription-activated', handler)
+      channel.unbind('subscription-canceled', handler)
       pusher.unsubscribe(channelName)
       pusher.disconnect()
       pusherRef.current = null

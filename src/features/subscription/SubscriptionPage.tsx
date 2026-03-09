@@ -80,12 +80,20 @@ export function SubscriptionPage() {
 
   // Push em tempo real: quando o webhook confirma o PIX, Pusher dispara e atualizamos na hora
   useEffect(() => {
-    if (lastNotification?.type !== 'subscription-activated') return
-    sub.refresh().then(() => {
-      toast.success('Pagamento confirmado! Assinatura ativada 🎉')
-      setPixData(null)
-      clearNotification()
-    })
+    if (lastNotification?.type === 'subscription-activated') {
+      sub.refresh().then(() => {
+        toast.success('Pagamento confirmado! Assinatura ativada 🎉')
+        setPixData(null)
+        clearNotification()
+      })
+      return
+    }
+    if (lastNotification?.type === 'subscription-canceled') {
+      sub.refresh().then(() => {
+        toast('Assinatura cancelada (devolução do PIX).', { icon: 'ℹ️' })
+        clearNotification()
+      })
+    }
   }, [lastNotification?.type])
 
   if (sub.loading) {
