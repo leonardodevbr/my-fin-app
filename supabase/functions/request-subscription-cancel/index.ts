@@ -40,13 +40,21 @@ Deno.serve(async (req) => {
 
   const { data: sub } = await supabase
     .from('user_subscriptions')
-    .select('plan, status, current_period_end')
+    .select('plan, status, current_period_start, current_period_end')
     .eq('user_id', user.id)
     .single()
 
   const periodEnd = sub?.current_period_end
     ? new Date(sub.current_period_end).toLocaleDateString('pt-BR')
     : 'N/A'
+
+  const periodStart = sub?.current_period_start ? new Date(sub.current_period_start) : null
+  const diasComoPro = periodStart ? (Date.now() - periodStart.getTime()) / (1000 * 60 * 60 * 24) : 999
+  const assinaturaRecente = diasComoPro < 7
+  const alertaTaxa =
+    assinaturaRecente
+      ? `<p style="background:#fef3c7;color:#92400e;padding:12px;border-radius:8px;font-weight:600;">⚠️ Assinatura recente (${Math.round(diasComoPro)} dias). Se devolver o PIX, você paga taxa em duas operações (~R$0,24). Considere política de não reembolso nos primeiros 7 dias.</p>`
+      : ''
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -57,10 +65,11 @@ Deno.serve(async (req) => {
     body: JSON.stringify({
       from: FROM_EMAIL,
       to: [SUPPORT_EMAIL],
-      subject: `[NunFi] Pedido de cancelamento - ${user.email ?? user.id}`,
+      subject: `[NunFi] Pedido de cancelamento - ${user.email ?? user.id}${assinaturaRecente ? ' (assinatura recente!)' : ''}`,
       html: `
         <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
           <h2 style="color:#0f172a">Pedido de cancelamento de assinatura</h2>
+          ${alertaTaxa}
           <p>O usuário solicitou o cancelamento do NunFi Pro.</p>
           <ul style="line-height:1.8;color:#334155">
             <li><strong>E-mail:</strong> ${user.email ?? '—'}</li>
@@ -68,6 +77,7 @@ Deno.serve(async (req) => {
             <li><strong>Plano atual:</strong> ${sub?.plan ?? '—'}</li>
             <li><strong>Status:</strong> ${sub?.status ?? '—'}</li>
             <li><strong>Válido até:</strong> ${periodEnd}</li>
+            <li><strong>Dias como Pro:</strong> ${Math.round(diasComoPro)}</li>
             <li><strong>Data do pedido:</strong> ${new Date().toLocaleString('pt-BR')}</li>
           </ul>
           <p style="color:#64748b;font-size:14px">Processar manualmente: não renovar na data de vencimento e, se desejar, enviar confirmação ao usuário.</p>

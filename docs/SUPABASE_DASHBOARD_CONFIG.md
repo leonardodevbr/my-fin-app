@@ -47,6 +47,13 @@ Em **Edge Functions** → **Secrets**, adicione as **chaves** e **valores** abai
 |------------------|------------------------------------------------|-------------|
 | `SUPPORT_EMAIL`  | E-mail que receberá os pedidos de cancelamento | Sim         |
 
+### Para `efi-webhook` (PIX + devolução)
+
+| Nome                 | Descrição                                                                 | Obrigatório |
+|----------------------|---------------------------------------------------------------------------|-------------|
+| `SUPPORT_EMAIL`      | Se definido, recebe alerta quando houver reembolso de assinatura recente | Não         |
+| `REFUND_ALERT_DAYS`  | Número de dias: reembolso dentro desse prazo gera e-mail de alerta (padrão: 7) | Não    |
+
 ### Para `trigger-pusher` (notificações em tempo real)
 
 | Nome               | Onde pegar                                      | Obrigatório |

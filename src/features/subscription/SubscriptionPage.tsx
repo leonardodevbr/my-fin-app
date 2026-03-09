@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Crown, CheckCircle, Copy, RefreshCw, QrCode, Clock, Zap, XCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../hooks/useAuth'
@@ -17,6 +18,8 @@ const FEATURES = [
 ]
 
 export function SubscriptionPage() {
+  const location = useLocation()
+  const fromRedirect = (location.state as { from?: string } | null)?.from
   const { user } = useAuth()
   const { lastNotification, clearNotification } = usePusher(user?.id)
   const sub = useSubscription()
@@ -107,6 +110,11 @@ export function SubscriptionPage() {
   return (
     <div className="mx-auto max-w-lg space-y-4 p-4">
       <h1 className="text-xl font-bold text-surface-900">Assinatura</h1>
+      {fromRedirect && !sub.hasAccess && (
+        <p className="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm px-3 py-2">
+          Assine o NunFi Pro para acessar transações, relatórios e todo o app.
+        </p>
+      )}
 
       {/* Status atual */}
       <Card>
@@ -261,8 +269,12 @@ function PaymentHistory() {
             </div>
             <div className="text-right">
               <p className="font-medium">R$ {(p.amount_cents / 100).toFixed(2)}</p>
-              <span className={`text-xs font-medium ${p.status === 'paid' ? 'text-green-600' : 'text-amber-500'}`}>
-                {p.status === 'paid' ? 'Pago' : 'Pendente'}
+              <span className={`text-xs font-medium ${
+                p.status === 'paid' ? 'text-green-600' :
+                p.status === 'refunded' ? 'text-slate-500' :
+                p.status === 'failed' ? 'text-red-600' : 'text-amber-500'
+              }`}>
+                {p.status === 'paid' ? 'Pago' : p.status === 'refunded' ? 'Devolvido' : p.status === 'failed' ? 'Falhou' : 'Pendente'}
               </span>
             </div>
           </div>

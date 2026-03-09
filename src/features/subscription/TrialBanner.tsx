@@ -16,8 +16,8 @@ export function TrialBanner() {
   if (!isExpired && !isUrgent) return null
 
   return (
-    <div className={`flex items-center justify-between gap-2 px-4 py-2 text-sm
-      ${isExpired ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'}`}>
+    <div className={`flex items-center justify-between gap-2 px-4 py-2.5 text-sm rounded-xl mx-4
+      ${isExpired ? 'bg-red-50 text-red-800 border border-red-200' : 'bg-amber-50 text-amber-800 border border-amber-200'}`}>
       <div className="flex items-center gap-2">
         <Crown className="h-4 w-4 shrink-0" />
         {isExpired
@@ -27,7 +27,7 @@ export function TrialBanner() {
       <div className="flex items-center gap-2">
         <button
           onClick={() => navigate('/subscription')}
-          className="rounded bg-white/20 px-2 py-0.5 text-xs font-semibold hover:bg-white/30"
+          className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${isExpired ? 'bg-red-200 text-red-900 hover:bg-red-300' : 'bg-amber-200 text-amber-900 hover:bg-amber-300'}`}
         >
           Assinar agora
         </button>

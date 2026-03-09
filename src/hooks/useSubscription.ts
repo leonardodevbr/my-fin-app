@@ -17,12 +17,12 @@ export interface SubscriptionInfo {
 const DEFAULT: SubscriptionInfo = {
   plan: 'free',
   status: 'trial',
-  hasAccess: true,
-  isTrialActive: true,
+  hasAccess: false,
+  isTrialActive: false,
   isProActive: false,
   trialEndsAt: null,
   currentPeriodEnd: null,
-  daysRemaining: 30,
+  daysRemaining: 0,
   loading: true,
   error: null,
 }

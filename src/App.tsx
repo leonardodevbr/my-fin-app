@@ -16,6 +16,7 @@ import { ProfilePage } from './features/profile/ProfilePage'
 import { ImportPage } from './features/import/ImportPage'
 import { ProjectionPage } from './features/projection/ProjectionPage'
 import { SubscriptionPage } from './features/subscription/SubscriptionPage'
+import { SubscriptionGuard } from './features/subscription/SubscriptionGuard'
 import { TrialBanner } from './features/subscription/TrialBanner'
 import { useAuth } from './hooks/useAuth'
 import { isSupabaseConfigured } from './lib/supabase'
@@ -71,6 +72,7 @@ function App() {
               <RedirectAfterAuth />
               <AppShell>
                 <TrialBanner />
+                <SubscriptionGuard>
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/transactions" element={<TransactionsPage />} />
@@ -84,6 +86,7 @@ function App() {
                   <Route path="/projection" element={<ProjectionPage />} />
                   <Route path="/subscription" element={<SubscriptionPage />} />
                 </Routes>
+                </SubscriptionGuard>
               </AppShell>
             </AuthGuard>
           }

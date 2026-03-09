@@ -8,6 +8,8 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') ?? 'NunFi <noreply@nunfi.com>'
+const SUPPORT_EMAIL = Deno.env.get('SUPPORT_EMAIL') ?? ''
+const REFUND_ALERT_DAYS = Math.max(0, parseInt(Deno.env.get('REFUND_ALERT_DAYS') ?? '7', 10))
 
 const PROXY_SECRET = Deno.env.get('EFI_PROXY_SECRET')!
 
@@ -34,18 +36,19 @@ Deno.serve(async (req) => {
     }
 
     for (const pix of body.pix ?? []) {
-      const isRefund = Array.isArray(pix.devolucoes) && pix.devolucoes.some((d) => d.status === 'DEVOLVIDO')
+      const devolucoes = Array.isArray(pix.devolucoes) ? pix.devolucoes : []
+      const totalDevolvido = devolucoes
+        .filter((d) => d.status === 'DEVOLVIDO')
+        .reduce((s, d) => s + (parseFloat(String(d.valor ?? 0)) || 0), 0)
+      const isRefund = devolucoes.some((d) => d.status === 'DEVOLVIDO')
 
       if (isRefund) {
-        // Devolução/estorno: marca pagamento como reembolsado e cancela a assinatura
-        console.log(`[Webhook] Devolução PIX txid=${pix.txid} valor=R$${pix.valor}`)
-
+        // Só cancela se o valor total devolvido >= valor da cobrança (evita cancelar em devolução parcial/taxa)
         const { data: payment } = await supabase
           .from('payment_history')
-          .update({ status: 'refunded' })
+          .select('user_id, amount_cents, paid_at')
           .eq('efi_txid', pix.txid)
           .eq('status', 'paid')
-          .select('user_id')
           .single()
 
         if (!payment) {
@@ -53,15 +56,30 @@ Deno.serve(async (req) => {
           continue
         }
 
+        const valorCobrancaReais = (payment.amount_cents ?? 0) / 100
+        const tolerancia = 0.01
+        if (totalDevolvido < valorCobrancaReais - tolerancia) {
+          console.log(`[Webhook] Devolução parcial ignorada txid=${pix.txid} devolvido=R$${totalDevolvido.toFixed(2)} cobrança=R$${valorCobrancaReais.toFixed(2)}`)
+          continue
+        }
+
+        console.log(`[Webhook] Devolução PIX txid=${pix.txid} valor=R$${pix.valor} devolvido=R$${totalDevolvido.toFixed(2)}`)
+
+        await supabase
+          .from('payment_history')
+          .update({ status: 'refunded' })
+          .eq('efi_txid', pix.txid)
+          .eq('status', 'paid')
+
         const now = new Date().toISOString()
         await supabase.from('user_subscriptions').update({
           plan: 'free',
           status: 'canceled',
           current_period_end: now,
           canceled_at: now,
-        }).eq('user_id', payment.user_id)
+        }).eq('user_id', payment!.user_id)
 
-        console.log(`[Webhook] Assinatura cancelada por devolução user=${payment.user_id}`)
+        console.log(`[Webhook] Assinatura cancelada por devolução (total) user=${payment!.user_id}`)
 
         const pusherUrl = `${SUPABASE_URL}/functions/v1/trigger-pusher`
         await fetch(pusherUrl, {
@@ -71,13 +89,13 @@ Deno.serve(async (req) => {
             Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
           },
           body: JSON.stringify({
-            userId: payment.user_id,
+            userId: payment!.user_id,
             event: 'subscription-canceled',
             data: { message: 'Assinatura cancelada (devolução PIX).', type: 'subscription-canceled' },
           }),
         }).catch((e) => console.warn('[Webhook] Pusher:', e))
 
-        const { data: { user } } = await supabase.auth.admin.getUserById(payment.user_id)
+        const { data: { user } } = await supabase.auth.admin.getUserById(payment!.user_id)
         if (user?.email && RESEND_API_KEY) {
           await fetch('https://api.resend.com/emails', {
             method: 'POST',
@@ -99,6 +117,38 @@ Deno.serve(async (req) => {
               `,
             }),
           }).catch((e) => console.warn('[Webhook] Email devolução:', e))
+        }
+
+        // Alerta interno: reembolso de assinatura recente = você paga taxa PIX em 2 operações (entrada + saída)
+        const paidAt = payment.paid_at ? new Date(payment.paid_at) : null
+        const diasDesdePagamento = paidAt ? (Date.now() - paidAt.getTime()) / (1000 * 60 * 60 * 24) : 999
+        if (SUPPORT_EMAIL && RESEND_API_KEY && REFUND_ALERT_DAYS > 0 && diasDesdePagamento < REFUND_ALERT_DAYS) {
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${RESEND_API_KEY}`,
+            },
+            body: JSON.stringify({
+              from: FROM_EMAIL,
+              to: [SUPPORT_EMAIL],
+              subject: `[NunFi] Atenção: reembolso de assinatura recente (${Math.round(diasDesdePagamento)} dias)`,
+              html: `
+                <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
+                  <h2 style="color:#b45309">Reembolso de assinatura recente</h2>
+                  <p>Um reembolso foi processado para um pagamento com <strong>menos de ${REFUND_ALERT_DAYS} dias</strong>. Você paga taxa PIX na entrada e na saída (~R$0,12 cada).</p>
+                  <ul style="line-height:1.8;color:#334155">
+                    <li><strong>E-mail do usuário:</strong> ${user?.email ?? '—'}</li>
+                    <li><strong>User ID:</strong> ${payment.user_id}</li>
+                    <li><strong>Pagou em:</strong> ${paidAt ? paidAt.toLocaleString('pt-BR') : '—'}</li>
+                    <li><strong>Valor:</strong> R$ ${valorCobrancaReais.toFixed(2)}</li>
+                    <li><strong>Dias desde o pagamento:</strong> ${Math.round(diasDesdePagamento)}</li>
+                  </ul>
+                  <p style="color:#64748b;font-size:14px">Considere política de &quot;não reembolso nos primeiros ${REFUND_ALERT_DAYS} dias&quot; para evitar perda com taxas em assinaturas que cancelam em seguida.</p>
+                </div>
+              `,
+            }),
+          }).catch((e) => console.warn('[Webhook] Email alerta suporte:', e))
         }
         continue
       }
