@@ -1,7 +1,6 @@
 // Registra o webhook PIX na Efi via proxy (mTLS). Chamar manualmente uma vez por ambiente.
 // Secrets: EFI_PROXY_URL, EFI_PROXY_SECRET
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const EFI_PROXY_URL = Deno.env.get('EFI_PROXY_URL')!
 const EFI_PROXY_SECRET = Deno.env.get('EFI_PROXY_SECRET')!
 
@@ -20,7 +19,7 @@ Deno.serve(async (req) => {
     })
 
   try {
-    const webhookUrl = `${SUPABASE_URL}/functions/v1/efi-webhook`
+    const webhookUrl = `${EFI_PROXY_URL.replace(/\/$/, '')}/efi-webhook`
     console.log('[efi-register-webhook] Chamando proxy para registrar:', webhookUrl)
 
     const res = await fetch(`${EFI_PROXY_URL}/register-webhook`, {

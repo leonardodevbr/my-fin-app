@@ -9,10 +9,16 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') ?? 'NunFi <noreply@nunfi.com>'
 
+const PROXY_SECRET = Deno.env.get('EFI_PROXY_SECRET')!
+
 Deno.serve(async (req) => {
-  // Efi Bank faz GET para validar o endpoint ao cadastrar
   if (req.method === 'GET') return new Response('OK', { status: 200 })
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
+
+  const auth = req.headers.get('Authorization')
+  if (!PROXY_SECRET || auth !== `Bearer ${PROXY_SECRET}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+  }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } })
 
