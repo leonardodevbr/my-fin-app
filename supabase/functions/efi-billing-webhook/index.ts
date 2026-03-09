@@ -19,10 +19,10 @@ async function getBillingToken(): Promise<string> {
   const res = await fetch(`${EFI_BILLING_BASE_URL}/v1/authorize`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
       Authorization: `Basic ${creds}`,
     },
-    body: JSON.stringify({ grant_type: 'client_credentials' }),
+    body: new URLSearchParams({ grant_type: 'client_credentials' }).toString(),
   })
   const raw = await res.text()
   if (!res.ok) throw new Error('Falha ao obter token Efí (billing)')
