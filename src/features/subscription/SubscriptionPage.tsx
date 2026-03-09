@@ -35,6 +35,8 @@ function formatCpf(value: string): string {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
 }
 
+const hasEfiPayeeCode = Boolean(import.meta.env.VITE_EFI_PAYEE_CODE)
+
 export function SubscriptionPage() {
   const { user } = useAuth()
   const { lastNotification, clearNotification } = usePusher(user?.id)
@@ -101,6 +103,11 @@ export function SubscriptionPage() {
         brand = await EfiPay.CreditCard.setCardNumber(cleanNumber).verifyCardBrand()
       } catch {
         toast.error('Cartão inválido ou não suportado.')
+        return
+      }
+
+      if (!hasEfiPayeeCode) {
+        toast.error('Pagamento com cartão não está disponível no momento. Use PIX.')
         return
       }
 
@@ -289,21 +296,23 @@ export function SubscriptionPage() {
                 <QrCode className="h-5 w-5 shrink-0" />
                 PIX
               </button>
-              <button
-                type="button"
-                onClick={() => setMethod('card')}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
-                  method === 'card'
-                    ? 'border-primary-400 bg-primary-50 text-primary-800 shadow-sm'
-                    : 'border-transparent bg-surface-200/60 text-surface-600 hover:bg-surface-200 hover:text-surface-700'
-                }`}
-              >
-                <CreditCard className="h-5 w-5 shrink-0" />
-                Cartão
-              </button>
+              {hasEfiPayeeCode && (
+                <button
+                  type="button"
+                  onClick={() => setMethod('card')}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
+                    method === 'card'
+                      ? 'border-primary-400 bg-primary-50 text-primary-800 shadow-sm'
+                      : 'border-transparent bg-surface-200/60 text-surface-600 hover:bg-surface-200 hover:text-surface-700'
+                  }`}
+                >
+                  <CreditCard className="h-5 w-5 shrink-0" />
+                  Cartão
+                </button>
+              )}
             </div>
 
-            {method === 'pix' ? (
+            {method === 'pix' || !hasEfiPayeeCode ? (
               !pixData ? (
                 <button
                   onClick={handleGeneratePix}
