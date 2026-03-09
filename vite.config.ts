@@ -11,8 +11,8 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       manifest: {
-        name: 'NunFi',
-        short_name: 'NunFi',
+        name: 'NunFí',
+        short_name: 'NunFí',
         theme_color: '#10b981',
         background_color: '#ffffff',
         display: 'standalone',

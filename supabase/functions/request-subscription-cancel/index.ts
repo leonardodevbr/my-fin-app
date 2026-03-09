@@ -1,4 +1,4 @@
-// Envia e-mail para processamento manual de cancelamento da assinatura NunFi Pro.
+// Envia e-mail para processamento manual de cancelamento da assinatura NunFí Pro.
 // Configurar: RESEND_API_KEY, FROM_EMAIL, SUPPORT_EMAIL (destino do pedido de cancelamento).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
   const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-  const FROM_EMAIL = Deno.env.get('FROM_EMAIL') ?? 'NunFi <noreply@nunfi.com>'
+  const FROM_EMAIL = Deno.env.get('FROM_EMAIL') ?? 'NunFí <noreply@NunFí.com>'
   const SUPPORT_EMAIL = Deno.env.get('SUPPORT_EMAIL')
 
   if (!RESEND_API_KEY) return json({ error: 'RESEND_API_KEY não configurada' }, 500)
@@ -65,12 +65,12 @@ Deno.serve(async (req) => {
     body: JSON.stringify({
       from: FROM_EMAIL,
       to: [SUPPORT_EMAIL],
-      subject: `[NunFi] Pedido de cancelamento - ${user.email ?? user.id}${assinaturaRecente ? ' (assinatura recente!)' : ''}`,
+      subject: `[NunFí] Pedido de cancelamento - ${user.email ?? user.id}${assinaturaRecente ? ' (assinatura recente!)' : ''}`,
       html: `
         <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
           <h2 style="color:#0f172a">Pedido de cancelamento de assinatura</h2>
           ${alertaTaxa}
-          <p>O usuário solicitou o cancelamento do NunFi Pro.</p>
+          <p>O usuário solicitou o cancelamento do NunFí Pro.</p>
           <ul style="line-height:1.8;color:#334155">
             <li><strong>E-mail:</strong> ${user.email ?? '—'}</li>
             <li><strong>User ID:</strong> ${user.id}</li>

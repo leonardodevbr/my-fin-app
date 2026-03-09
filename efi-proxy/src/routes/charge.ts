@@ -30,8 +30,8 @@ chargeRouter.post('/', async (req: Request, res: Response) => {
         calendario: { expiracao: 3600 },
         valor: { original: (amountCents / 100).toFixed(2) },
         chave: process.env.EFI_PIX_KEY!,
-        solicitacaoPagador: description ?? 'NunFi Pro — Assinatura mensal',
-        infoAdicionais: [{ nome: 'Plano', valor: 'NunFi Pro' }],
+        solicitacaoPagador: description ?? 'NunFí Pro — Assinatura mensal',
+        infoAdicionais: [{ nome: 'Plano', valor: 'NunFí Pro' }],
       },
       { headers: { Authorization: `Bearer ${token}` } }
     )

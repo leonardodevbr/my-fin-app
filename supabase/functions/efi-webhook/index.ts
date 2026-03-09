@@ -7,7 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
-const FROM_EMAIL = Deno.env.get('FROM_EMAIL') ?? 'NunFi <noreply@nunfi.com>'
+const FROM_EMAIL = Deno.env.get('FROM_EMAIL') ?? 'NunFí <noreply@NunFí.com>'
 const SUPPORT_EMAIL = Deno.env.get('SUPPORT_EMAIL') ?? ''
 const REFUND_ALERT_DAYS = Math.max(0, parseInt(Deno.env.get('REFUND_ALERT_DAYS') ?? '7', 10))
 
@@ -106,11 +106,11 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               from: FROM_EMAIL,
               to: [user.email],
-              subject: 'NunFi Pro – Assinatura cancelada (devolução)',
+              subject: 'NunFí Pro – Assinatura cancelada (devolução)',
               html: `
                 <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
                   <h1 style="color:#0f172a">Assinatura cancelada</h1>
-                  <p>O pagamento referente ao seu plano <strong>NunFi Pro</strong> foi devolvido/estornado.</p>
+                  <p>O pagamento referente ao seu plano <strong>NunFí Pro</strong> foi devolvido/estornado.</p>
                   <p>Sua assinatura foi cancelada e o acesso ao Pro foi encerrado.</p>
                   <p style="color:#64748b;font-size:14px">Para assinar novamente, acesse o app e gere um novo PIX.</p>
                 </div>
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               from: FROM_EMAIL,
               to: [SUPPORT_EMAIL],
-              subject: `[NunFi] Atenção: reembolso de assinatura recente (${Math.round(diasDesdePagamento)} dias)`,
+              subject: `[NunFí] Atenção: reembolso de assinatura recente (${Math.round(diasDesdePagamento)} dias)`,
               html: `
                 <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
                   <h2 style="color:#b45309">Reembolso de assinatura recente</h2>
@@ -208,14 +208,14 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               from: FROM_EMAIL,
               to: [user.email],
-              subject: '✅ NunFi Pro ativado!',
+              subject: '✅ NunFí Pro ativado!',
               html: `
                 <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
                   <h1 style="color:#10b981">Pagamento confirmado!</h1>
-                  <p>Seu plano <strong>NunFi Pro</strong> está ativo até
+                  <p>Seu plano <strong>NunFí Pro</strong> está ativo até
                      <strong>${periodEnd.toLocaleDateString('pt-BR')}</strong>.</p>
                   <p style="color:#64748b;font-size:14px">Valor: R$ ${parseFloat(pix.valor).toFixed(2)}</p>
-                  <p>Obrigado por assinar o NunFi! 🎉</p>
+                  <p>Obrigado por assinar o NunFí! 🎉</p>
                 </div>
               `,
             }),

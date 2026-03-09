@@ -18,7 +18,7 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title ?? 'NunFi', {
+    self.registration.showNotification(data.title ?? 'NunFí', {
       body: data.body ?? 'Você tem contas a pagar!',
       icon: '/pwa-192x192.png',
       badge: '/pwa-192x192.png',

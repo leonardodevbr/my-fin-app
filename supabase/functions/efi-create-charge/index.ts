@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         userId: user.id,
         amountCents: AMOUNT_CENTS,
-        description: 'NunFi Pro — Assinatura mensal',
+        description: 'NunFí Pro — Assinatura mensal',
       }),
     })
 

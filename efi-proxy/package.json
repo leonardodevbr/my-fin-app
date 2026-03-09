@@ -1,5 +1,5 @@
 {
-  "name": "nunfi-efi-proxy",
+  "name": "NunFí-efi-proxy",
   "version": "1.0.0",
   "scripts": {
     "build": "tsc",

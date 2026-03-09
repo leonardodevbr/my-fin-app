@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { cn } from '../../lib/utils'
 
-const LOGO_ALT = 'NunFi'
+const LOGO_ALT = 'NunFí'
 /** Logos ficam na raiz de public (fora de favicon). */
 const LOGO_PATHS = ['/logo.png', '/logo.svg']
 const WHITE_LOGO_PATHS = ['/white-logo.png', '/white-logo.svg']

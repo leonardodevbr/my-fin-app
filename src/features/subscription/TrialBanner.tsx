@@ -24,7 +24,7 @@ export function TrialBanner() {
       <div className="flex items-center gap-2">
         <Crown className="h-4 w-4 shrink-0" />
         {isExpired
-          ? 'Seu acesso expirou. Assine o NunFi Pro para continuar.'
+          ? 'Seu acesso expirou. Assine o NunFí Pro para continuar.'
           : `Trial expira em ${daysRemaining} dia${daysRemaining !== 1 ? 's' : ''}.`}
       </div>
       <div className="flex items-center gap-2">

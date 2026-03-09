@@ -1,4 +1,4 @@
--- Assinaturas NunFi Pro + histórico de pagamentos
+-- Assinaturas NunFí Pro + histórico de pagamentos
 
 -- Enum de status
 create type plan_status as enum ('trial', 'active', 'past_due', 'canceled', 'expired');

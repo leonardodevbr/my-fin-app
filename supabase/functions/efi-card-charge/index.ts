@@ -1,4 +1,4 @@
-// Cobra o NunFi Pro (R$ 9,90) no cartão de crédito via API de Cobranças da Efí.
+// Cobra o NunFí Pro (R$ 9,90) no cartão de crédito via API de Cobranças da Efí.
 // Fluxo: front gera payment_token com payment-token-efi → chama esta função → esta função cria a cobrança one-step.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         items: [
           {
-            name: 'NunFi Pro – Assinatura mensal',
+            name: 'NunFí Pro – Assinatura mensal',
             value: AMOUNT_CENTS,
             amount: 1,
           },
@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
         payment: {
           credit_card: {
             customer: {
-              name: body.customer?.name ?? user.email ?? 'Cliente NunFi',
+              name: body.customer?.name ?? user.email ?? 'Cliente NunFí',
               cpf,
               email: body.customer?.email ?? user.email ?? '',
               phone_number: (() => {

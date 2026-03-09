@@ -273,7 +273,7 @@ export function SubscriptionPage() {
           </div>
           <div className="flex-1">
             <p className="font-semibold text-surface-900">
-              {sub.isProActive ? 'NunFi Pro' : sub.isTrialActive ? 'Trial gratuito' : 'Sem assinatura ativa'}
+              {sub.isProActive ? 'NunFí Pro' : sub.isTrialActive ? 'Trial gratuito' : 'Sem assinatura ativa'}
             </p>
             <p className="text-sm text-surface-500">
               {sub.isTrialActive && `${sub.daysRemaining} dias restantes de trial`}
@@ -309,7 +309,7 @@ export function SubscriptionPage() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <Zap className="h-4 w-4 text-primary-500" />
-              NunFi Pro
+              NunFí Pro
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -567,7 +567,7 @@ export function SubscriptionPage() {
                   {cardProcessing ? 'Processando...' : 'Assinar com cartão'}
                 </button>
                 <p className="text-xs text-surface-400">
-                  Pagamento processado pela Efí. Seus dados de cartão não são armazenados pelo NunFi.
+                  Pagamento processado pela Efí. Seus dados de cartão não são armazenados pelo NunFí.
                 </p>
               </form>
             )}
@@ -610,7 +610,7 @@ function PaymentHistory() {
         {payments.map(p => (
           <div key={p.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
             <div>
-              <p className="font-medium text-surface-800">NunFi Pro</p>
+              <p className="font-medium text-surface-800">NunFí Pro</p>
               <p className="text-xs text-surface-400">{new Date(p.created_at).toLocaleDateString('pt-BR')}</p>
             </div>
             <div className="text-right">

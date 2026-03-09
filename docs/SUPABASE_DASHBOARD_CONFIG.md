@@ -39,7 +39,7 @@ Em **Edge Functions** → **Secrets**, adicione as **chaves** e **valores** abai
 | Nome             | Onde pegar                    | Obrigatório |
 |------------------|-------------------------------|-------------|
 | `RESEND_API_KEY` | [Resend](https://resend.com) → API Keys | Sim         |
-| `FROM_EMAIL`     | Ex.: `NunFi <noreply@seudominio.com>`   | Não (usa padrão Resend) |
+| `FROM_EMAIL`     | Ex.: `NunFí <noreply@seudominio.com>`   | Não (usa padrão Resend) |
 
 ### Para `request-subscription-cancel` (pedido de cancelamento)
 

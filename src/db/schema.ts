@@ -1,5 +1,5 @@
 /**
- * Domain types and Dexie schema for NunFi
+ * Domain types and Dexie schema for NunFí
  *
  * Core concept:
  * - A "transaction" is a single financial event on a specific date.
