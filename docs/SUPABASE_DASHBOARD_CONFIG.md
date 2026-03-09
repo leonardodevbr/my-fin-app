@@ -22,6 +22,7 @@ Como você não usa o CLI, precisa criar/deployar as funções pelo editor do Da
 |-------------------------|--------------------------------------------------|
 | `send-report-email`     | `supabase/functions/send-report-email/index.ts`  |
 | `send-template-email`  | envia planilha modelo                            |
+| `request-subscription-cancel` | `supabase/functions/request-subscription-cancel/index.ts` (pedido de cancelamento por e-mail) |
 | `trigger-pusher`       | `supabase/functions/trigger-pusher/index.ts`      |
 | `scheduler-due-notifications` | chamada pelo pg_cron (Pusher + Web Push + email) |
 
@@ -39,6 +40,12 @@ Em **Edge Functions** → **Secrets**, adicione as **chaves** e **valores** abai
 |------------------|-------------------------------|-------------|
 | `RESEND_API_KEY` | [Resend](https://resend.com) → API Keys | Sim         |
 | `FROM_EMAIL`     | Ex.: `NunFi <noreply@seudominio.com>`   | Não (usa padrão Resend) |
+
+### Para `request-subscription-cancel` (pedido de cancelamento)
+
+| Nome             | Descrição                                      | Obrigatório |
+|------------------|------------------------------------------------|-------------|
+| `SUPPORT_EMAIL`  | E-mail que receberá os pedidos de cancelamento | Sim         |
 
 ### Para `trigger-pusher` (notificações em tempo real)
 

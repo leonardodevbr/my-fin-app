@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Crown, CheckCircle, Copy, RefreshCw, QrCode, Clock, Zap } from 'lucide-react'
+import { Crown, CheckCircle, Copy, RefreshCw, QrCode, Clock, Zap, XCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../hooks/useAuth'
 import { usePusher } from '../../hooks/usePusher'
@@ -22,6 +22,7 @@ export function SubscriptionPage() {
   const sub = useSubscription()
   const [generating, setGenerating] = useState(false)
   const [checking, setChecking] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
   const [pixData, setPixData] = useState<{
     pixCopiaECola: string
     qrCodeImage: string | null
@@ -58,6 +59,22 @@ export function SubscriptionPage() {
       setPixData(null)
     } else {
       toast('Pagamento ainda não confirmado. Aguarde alguns segundos.', { icon: '⏳' })
+    }
+  }
+
+  const handleRequestCancel = async () => {
+    setCancelling(true)
+    try {
+      const supabase = getSupabase()
+      if (!supabase) return
+      const { data, error } = await supabase.functions.invoke('request-subscription-cancel')
+      if (error) {
+        toast.error(data?.error ?? 'Erro ao enviar pedido. Tente novamente.')
+        return
+      }
+      toast.success('Pedido de cancelamento enviado. Nossa equipe processará em breve.')
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -103,6 +120,22 @@ export function SubscriptionPage() {
             <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Ativo</span>
           )}
         </CardContent>
+        {sub.isProActive && (
+          <div className="border-t border-surface-100 px-4 py-3">
+            <button
+              type="button"
+              onClick={handleRequestCancel}
+              disabled={cancelling}
+              className="flex w-full items-center justify-center gap-2 text-sm text-surface-500 hover:text-red-600 disabled:opacity-60"
+            >
+              <XCircle className="h-4 w-4" />
+              {cancelling ? 'Enviando...' : 'Solicitar cancelamento'}
+            </button>
+            <p className="mt-1 text-center text-xs text-surface-400">
+              Enviaremos seu pedido por e-mail para processamento em até 48h.
+            </p>
+          </div>
+        )}
       </Card>
 
       {/* Plano Pro */}
