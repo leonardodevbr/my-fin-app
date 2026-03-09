@@ -127,8 +127,10 @@ export function SubscriptionPage() {
             ) : (
               <div className="space-y-3">
                 {pixData.qrCodeImage && (
+                  // A API já pode retornar a imagem como data URL completo ou apenas o base64
+                  // Garante que o src fique correto nos dois casos
                   <img
-                    src={`data:image/png;base64,${pixData.qrCodeImage}`}
+                    src={pixData.qrCodeImage.startsWith('data:') ? pixData.qrCodeImage : `data:image/png;base64,${pixData.qrCodeImage}`}
                     alt="QR Code PIX"
                     className="mx-auto h-44 w-44 rounded-xl border border-surface-200"
                   />
