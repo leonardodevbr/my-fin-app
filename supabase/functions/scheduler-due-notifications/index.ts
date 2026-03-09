@@ -2,12 +2,14 @@
 // Chamada pelo pg_cron todo dia às 8h (BRT).
 // Para cada usuário com transações a vencer nos próximos 14 dias:
 //   1. Dispara notificação Pusher (tempo real no app)
-//   2. Envia email via Resend
+//   2. Envia Web Push (notificação no celular com app fechado)
+//   3. Envia email via Resend
 //
-// Secrets: RESEND_API_KEY, FROM_EMAIL, PUSHER_APP_ID, PUSHER_KEY, PUSHER_SECRET, PUSHER_CLUSTER
+// Secrets: RESEND_API_KEY, FROM_EMAIL, PUSHER_*, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (opcional)
 // Chamada com: Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import webpush from 'npm:web-push@3.6.7'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -17,6 +19,14 @@ const PUSHER_APP_ID = Deno.env.get('PUSHER_APP_ID')!
 const PUSHER_KEY = Deno.env.get('PUSHER_KEY')!
 const PUSHER_SECRET = Deno.env.get('PUSHER_SECRET')!
 const PUSHER_CLUSTER = Deno.env.get('PUSHER_CLUSTER') ?? 'sa1'
+
+const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY')
+const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')
+const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:contato@nunfi.com'
+
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
+}
 
 const DAYS_AHEAD = 14
 
@@ -147,6 +157,54 @@ function buildEmailHtml(items: Transaction[]): string {
 </html>`
 }
 
+// ─── Web Push ────────────────────────────────────────────────────────────────
+
+async function sendWebPush(
+  userId: string,
+  count: number,
+  supabase: ReturnType<typeof createClient>
+): Promise<void> {
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    console.log('[WebPush] VAPID não configurado, pulando.')
+    return
+  }
+
+  const { data: subs, error } = await supabase
+    .from('push_subscriptions')
+    .select('subscription, endpoint')
+    .eq('user_id', userId)
+
+  if (error || !subs?.length) {
+    console.log(`[WebPush] Sem subscriptions para user=${userId}`)
+    return
+  }
+
+  const payload = JSON.stringify({
+    title: 'NunFi — Contas a pagar',
+    body: `Você tem ${count} conta(s) a vencer nos próximos ${DAYS_AHEAD} dias.`,
+    url: '/#/transactions',
+  })
+
+  await Promise.all(
+    subs.map(async (row: { subscription: Record<string, unknown>; endpoint: string }) => {
+      try {
+        await webpush.sendNotification(row.subscription, payload)
+        console.log(`[WebPush] Enviado para endpoint=${row.endpoint.slice(0, 40)}...`)
+      } catch (e: unknown) {
+        const err = e as { statusCode?: number; body?: string; message?: string }
+        console.error(`[WebPush] Falha endpoint=${row.endpoint.slice(0, 40)}: ${err.body ?? err}`)
+        if (err.statusCode === 410) {
+          await supabase
+            .from('push_subscriptions')
+            .delete()
+            .eq('user_id', userId)
+            .eq('endpoint', row.endpoint)
+        }
+      }
+    })
+  )
+}
+
 async function sendEmail(email: string, items: Transaction[]): Promise<void> {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -238,10 +296,11 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[Scheduler] ${byUser.size} usuário(s) com transações a vencer.`)
 
-    // 4. Dispara Pusher + Email para cada usuário
+    // 4. Dispara Pusher + Web Push + Email para cada usuário
     const results = await Promise.allSettled(
       Array.from(byUser.values()).map(async ({ userId, email, items }) => {
         await triggerPusher(userId, items.length)
+        await sendWebPush(userId, items.length, supabase)
         await sendEmail(email, items)
         return { userId, count: items.length }
       })

@@ -18,6 +18,7 @@ import { ProjectionPage } from './features/projection/ProjectionPage'
 import { useAuth } from './hooks/useAuth'
 import { isSupabaseConfigured } from './lib/supabase'
 import { RecurringSchedulerInit } from './sync/RecurringSchedulerInit'
+import { WebPushInit } from './sync/WebPushInit'
 
 const REDIRECT_KEY = 'finapp_redirect_after_auth'
 
@@ -64,6 +65,7 @@ function App() {
           element={
             <AuthGuard>
               <RecurringSchedulerInit />
+              <WebPushInit />
               <RedirectAfterAuth />
               <AppShell>
                 <Routes>

@@ -21,8 +21,9 @@ Como você não usa o CLI, precisa criar/deployar as funções pelo editor do Da
 | Função                  | Arquivo no projeto                              |
 |-------------------------|--------------------------------------------------|
 | `send-report-email`     | `supabase/functions/send-report-email/index.ts`  |
-| `send-template-email`  | (já existia) envia planilha modelo               |
-| `trigger-pusher`       | `supabase/functions/trigger-pusher/index.ts`     |
+| `send-template-email`  | envia planilha modelo                            |
+| `trigger-pusher`       | `supabase/functions/trigger-pusher/index.ts`      |
+| `scheduler-due-notifications` | chamada pelo pg_cron (Pusher + Web Push + email) |
 
 Depois de colar o código, clique em **Deploy function**.
 
@@ -73,5 +74,7 @@ No frontend você já usa `VITE_SUPABASE_URL`; a URL das functions é sempre `VI
 2. **Edge Functions** → **Secrets** → adicionar no mínimo:
    - `RESEND_API_KEY` (para relatório e planilha por e-mail)
    - Se for usar Pusher: `PUSHER_APP_ID`, `PUSHER_KEY`, `PUSHER_SECRET`, `PUSHER_CLUSTER`.
+   - Para Web Push (notificação com app fechado): `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (gerar com `npx web-push generate-vapid-keys`).
+3. **Frontend** (`.env`): `VITE_VAPID_PUBLIC_KEY` = mesma chave pública VAPID.
 
 Não é necessário reinstalar o CLI nem rodar comandos no terminal para isso.
