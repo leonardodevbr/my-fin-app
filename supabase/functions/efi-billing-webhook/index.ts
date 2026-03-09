@@ -6,7 +6,11 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const EFI_BILLING_BASE_URL = Deno.env.get('EFI_BILLING_BASE_URL') ?? 'https://api.efipay.com.br'
+const EFI_BILLING_BASE_URL =
+  Deno.env.get('EFI_BILLING_BASE_URL') ??
+  (Deno.env.get('EFI_BILLING_ENV') === 'production'
+    ? 'https://cobrancas.api.efipay.com.br'
+    : 'https://cobrancas-h.api.efipay.com.br')
 const EFI_BILLING_CLIENT_ID = Deno.env.get('EFI_BILLING_CLIENT_ID')!
 const EFI_BILLING_CLIENT_SECRET = Deno.env.get('EFI_BILLING_CLIENT_SECRET')!
 
@@ -20,8 +24,11 @@ async function getBillingToken(): Promise<string> {
     },
     body: JSON.stringify({ grant_type: 'client_credentials' }),
   })
+  const raw = await res.text()
   if (!res.ok) throw new Error('Falha ao obter token Efí (billing)')
-  const data = (await res.json()) as { access_token: string }
+  if (raw.trimStart().startsWith('<')) throw new Error('Efí retornou HTML; verifique EFI_BILLING_BASE_URL')
+  const data = JSON.parse(raw) as { access_token?: string }
+  if (!data?.access_token) throw new Error('Efí não retornou access_token')
   return data.access_token
 }
 

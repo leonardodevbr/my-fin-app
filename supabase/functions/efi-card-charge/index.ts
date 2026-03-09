@@ -6,8 +6,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-// API de Cobranças (cartão), não é a API PIX.
-const EFI_BILLING_BASE_URL = Deno.env.get('EFI_BILLING_BASE_URL') ?? 'https://api.efipay.com.br'
+// API de Cobranças (cartão): base URL por ambiente (Efí usa cobranças.api / cobrancas-h.api)
+const EFI_BILLING_BASE_URL =
+  Deno.env.get('EFI_BILLING_BASE_URL') ??
+  (Deno.env.get('EFI_BILLING_ENV') === 'production'
+    ? 'https://cobrancas.api.efipay.com.br'
+    : 'https://cobrancas-h.api.efipay.com.br')
 const EFI_BILLING_CLIENT_ID = Deno.env.get('EFI_BILLING_CLIENT_ID')!
 const EFI_BILLING_CLIENT_SECRET = Deno.env.get('EFI_BILLING_CLIENT_SECRET')!
 
@@ -20,7 +24,8 @@ const cors = {
 
 async function getBillingToken(): Promise<string> {
   const creds = btoa(`${EFI_BILLING_CLIENT_ID}:${EFI_BILLING_CLIENT_SECRET}`)
-  const res = await fetch(`${EFI_BILLING_BASE_URL}/oauth/token`, {
+  const url = `${EFI_BILLING_BASE_URL}/oauth/token`
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -29,13 +34,31 @@ async function getBillingToken(): Promise<string> {
     body: JSON.stringify({ grant_type: 'client_credentials' }),
   })
 
+  const raw = await res.text()
+
   if (!res.ok) {
-    const err = await res.text()
-    console.error('[efi-card-charge] Erro ao obter token:', err)
+    console.error('[efi-card-charge] Erro ao obter token:', res.status, raw.slice(0, 500))
     throw new Error('Falha ao autenticar na Efí (cartão)')
   }
 
-  const data = (await res.json()) as { access_token: string }
+  if (raw.trimStart().startsWith('<')) {
+    console.error('[efi-card-charge] Resposta da Efí veio em HTML (URL errada?). Base:', EFI_BILLING_BASE_URL, 'Body:', raw.slice(0, 300))
+    throw new Error('Configuração da API Efí incorreta. Verifique EFI_BILLING_BASE_URL (use cobrancas-h.api.efipay.com.br para sandbox e cobrancas.api.efipay.com.br para produção).')
+  }
+
+  let data: { access_token?: string }
+  try {
+    data = JSON.parse(raw) as { access_token: string }
+  } catch {
+    console.error('[efi-card-charge] Resposta não é JSON:', raw.slice(0, 300))
+    throw new Error('Resposta inválida da Efí ao obter token')
+  }
+
+  if (!data?.access_token) {
+    console.error('[efi-card-charge] Token não veio na resposta:', raw.slice(0, 300))
+    throw new Error('Efí não retornou access_token')
+  }
+
   return data.access_token
 }
 
