@@ -127,7 +127,7 @@ export function TransactionItem({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onClick={(e) => {
+        onClick={() => {
           if (longPressedRef.current) {
             // Já acionou long press: não editar.
             longPressedRef.current = false
