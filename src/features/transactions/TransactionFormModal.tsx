@@ -264,6 +264,8 @@ export function TransactionFormModal({
     }
   }
 
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+
   const onSubmit = async (values: FormValues) => {
     const parsed = schema.safeParse(values)
     if (!parsed.success) {
@@ -421,7 +423,20 @@ export function TransactionFormModal({
         }}
         className="flex flex-1 flex-col overflow-hidden"
       >
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+          onFocusCapture={(e) => {
+            const target = e.target as HTMLElement | null
+            if (!target || !scrollContainerRef.current) return
+            const container = scrollContainerRef.current
+            const targetRect = target.getBoundingClientRect()
+            const containerRect = container.getBoundingClientRect()
+            const offset = targetRect.top - containerRect.top
+            const desired = container.scrollTop + offset - 80
+            container.scrollTo({ top: desired, behavior: 'smooth' })
+          }}
+        >
           {/* Tipo de lançamento (Único, Fixo, Parcelado) */}
           {!transaction?.group_id && (
             <div>

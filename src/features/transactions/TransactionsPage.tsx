@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, CheckSquare } from 'lucide-react'
+import { Plus, CheckSquare, SlidersHorizontal } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -64,6 +64,9 @@ export function TransactionsPage() {
 
   const [transactionMonth, setTransactionMonth] = useState(() => toMonthKey(new Date()))
   const [filter, setFilter] = useState<TransactionFilter>('all')
+  const [paidFilter, setPaidFilter] = useState<'all' | 'paid' | 'unpaid'>('all')
+  const [tagFilter, setTagFilter] = useState<string[]>([])
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebounce(searchInput, 300)
 
@@ -90,15 +93,38 @@ export function TransactionsPage() {
     accountId: accountIdParam,
   })
 
+  const allTags = useMemo(() => {
+    const set = new Set<string>()
+    for (const t of rawTransactions) {
+      for (const tag of t.tags ?? []) {
+        if (tag.trim()) set.add(tag)
+      }
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [rawTransactions])
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0
+    if (paidFilter !== 'all') count += 1
+    count += tagFilter.length
+    return count
+  }, [paidFilter, tagFilter])
+
   const transactions = useMemo(() => {
     let list = rawTransactions
 
     if (filter !== 'all') {
-      if (filter === 'unpaid') {
-        list = list.filter((t) => !t.is_paid)
-      } else {
-        list = list.filter((t) => t.type === filter)
-      }
+      list = list.filter((t) => t.type === filter)
+    }
+
+    if (paidFilter === 'paid') {
+      list = list.filter((t) => t.is_paid)
+    } else if (paidFilter === 'unpaid') {
+      list = list.filter((t) => !t.is_paid)
+    }
+
+    if (tagFilter.length > 0) {
+      list = list.filter((t) => (t.tags ?? []).some((tag) => tagFilter.includes(tag)))
     }
 
     if (debouncedSearch.trim()) {
@@ -119,6 +145,17 @@ export function TransactionsPage() {
       else transfer += t.amount
     }
     return { income, expense, transfer }
+  }, [transactions])
+
+  const periodNet = useMemo(() => {
+    let projected = 0
+    let consolidated = 0
+    for (const t of transactions) {
+      const delta = t.type === 'income' ? t.amount : t.type === 'expense' ? -t.amount : 0
+      projected += delta
+      if (t.is_paid) consolidated += delta
+    }
+    return { projected, consolidated }
   }, [transactions])
 
   const handleEdit = (t: Transaction) => {
@@ -267,6 +304,19 @@ export function TransactionsPage() {
 
       <div className="flex flex-wrap items-center gap-2">
         <TransactionFilters value={filter} onChange={setFilter} />
+        <button
+          type="button"
+          onClick={() => setFiltersOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-surface-300 bg-white px-3 py-1.5 text-xs font-medium text-surface-700 shadow-sm"
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          Filtros
+          {activeFiltersCount > 0 && (
+            <span className="ml-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-semibold text-white">
+              {activeFiltersCount}
+            </span>
+          )}
+        </button>
       </div>
 
       <input
@@ -298,6 +348,30 @@ export function TransactionsPage() {
         )}
       </div>
 
+      <div className="flex flex-nowrap items-center gap-x-2 overflow-x-auto rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-xs min-w-0">
+        <span className="font-medium text-surface-600 shrink-0">Resultado consolidado</span>
+        <span
+          className={cn(
+            'font-semibold tabular-nums shrink-0',
+            periodNet.consolidated >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
+          )}
+        >
+          {periodNet.consolidated >= 0 ? '+' : ''}
+          {formatCurrencyFromCents(periodNet.consolidated)}
+        </span>
+        <span className="text-surface-400 shrink-0">/</span>
+        <span className="font-medium text-surface-600 shrink-0">Resultado previsto</span>
+        <span
+          className={cn(
+            'font-semibold tabular-nums shrink-0',
+            periodNet.projected >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
+          )}
+        >
+          {periodNet.projected >= 0 ? '+' : ''}
+          {formatCurrencyFromCents(periodNet.projected)}
+        </span>
+      </div>
+
       <TransactionList
         transactions={transactions}
         onEdit={handleEdit}
@@ -309,6 +383,10 @@ export function TransactionsPage() {
         onBulkMarkPaid={selectionMode && selectedIds.size > 0 ? handleBulkMarkPaid : undefined}
         onBulkDelete={selectionMode && selectedIds.size > 0 ? handleBulkDeleteClick : undefined}
         onCancelSelection={selectionMode ? () => { setSelectionMode(false); setSelectedIds(new Set()) } : undefined}
+        onLongPressSelect={(id) => {
+          setSelectionMode(true)
+          setSelectedIds(new Set([id]))
+        }}
       />
 
       <TransactionFormModal
@@ -385,6 +463,89 @@ export function TransactionsPage() {
               </Button>
               <Button variant="ghost" onClick={() => setDeleteState(null)} className="w-full">
                 Cancelar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {filtersOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-surface-900">Filtros</h3>
+            <div className="mt-4 space-y-4">
+              <div>
+                <p className="text-xs font-medium text-surface-600 mb-1">Pagamento</p>
+                <div className="flex gap-2">
+                  {[
+                    { value: 'all', label: 'Todos' },
+                    { value: 'paid', label: 'Pagos' },
+                    { value: 'unpaid', label: 'Pendentes' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setPaidFilter(opt.value as 'all' | 'paid' | 'unpaid')}
+                      className={cn(
+                        'flex-1 rounded-full px-3 py-1.5 text-xs font-medium border',
+                        paidFilter === opt.value
+                          ? 'border-primary-500 bg-primary-50 text-primary-700'
+                          : 'border-surface-300 bg-surface-100 text-surface-700'
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {allTags.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-surface-600 mb-1">Tags</p>
+                  <div className="flex flex-wrap gap-2">
+                    {allTags.map((tag) => {
+                      const active = tagFilter.includes(tag)
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() =>
+                            setTagFilter((prev) =>
+                              prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                            )
+                          }
+                          className={cn(
+                            'rounded-full px-3 py-1 text-xs font-medium border',
+                            active
+                              ? 'border-primary-500 bg-primary-50 text-primary-700'
+                              : 'border-surface-300 bg-surface-100 text-surface-700'
+                          )}
+                        >
+                          {tag}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex flex-col gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setPaidFilter('all')
+                  setTagFilter([])
+                }}
+                className="w-full"
+              >
+                Limpar filtros
+              </Button>
+              <Button
+                onClick={() => setFiltersOpen(false)}
+                className="w-full"
+              >
+                Aplicar
               </Button>
             </div>
           </div>

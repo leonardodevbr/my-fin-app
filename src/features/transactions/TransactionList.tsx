@@ -23,6 +23,7 @@ export interface TransactionListProps {
   onBulkMarkPaid?: () => void
   onBulkDelete?: () => void
   onCancelSelection?: () => void
+  onLongPressSelect?: (id: string) => void
 }
 
 function groupByDate(transactions: Transaction[]): { date: string; items: Transaction[]; dayTotal: number }[] {
@@ -55,6 +56,7 @@ export function TransactionList({
   onBulkMarkPaid,
   onBulkDelete,
   onCancelSelection,
+  onLongPressSelect,
 }: TransactionListProps) {
   const [page, setPage] = useState(1)
   const accounts = useAccounts(false)
@@ -168,6 +170,7 @@ export function TransactionList({
                   onToggleSelect={onToggleSelect ? () => onToggleSelect(t.id, !selectedIds.has(t.id)) : undefined}
                   paymentMode={t.group_id ? groupMap.get(t.group_id)?.payment_mode : null}
                   installmentsTotal={t.group_id ? groupMap.get(t.group_id)?.installments_total ?? null : null}
+                  onLongPress={onLongPressSelect ? () => onLongPressSelect(t.id) : undefined}
                 />
               </li>
             ))}

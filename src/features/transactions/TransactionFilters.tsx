@@ -1,14 +1,13 @@
 import { cn } from '../../lib/utils'
 import type { TransactionType } from '../../db'
 
-export type TransactionFilter = 'all' | TransactionType | 'unpaid'
+export type TransactionFilter = 'all' | TransactionType
 
 const FILTERS: { value: TransactionFilter; label: string }[] = [
   { value: 'all', label: 'Todas' },
   { value: 'income', label: 'Receitas' },
   { value: 'expense', label: 'Despesas' },
   { value: 'transfer', label: 'Transferências' },
-  { value: 'unpaid', label: 'A pagar' },
 ]
 
 export interface TransactionFiltersProps {

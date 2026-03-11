@@ -25,6 +25,8 @@ export interface TransactionItemProps {
   /** Tipo de transação (do grupo): exibe indicador Fixo / Parcelado 1/3 */
   paymentMode?: PaymentMode | null
   installmentsTotal?: number | null
+  /** Long press em mobile/desktop para iniciar seleção múltipla. */
+  onLongPress?: () => void
 }
 
 export function TransactionItem({
@@ -41,9 +43,12 @@ export function TransactionItem({
   onToggleSelect,
   paymentMode,
   installmentsTotal,
+  onLongPress,
 }: TransactionItemProps) {
   const [dragX, setDragX] = useState(0)
   const startX = useRef(0)
+  const longPressTimeout = useRef<number | null>(null)
+  const longPressedRef = useRef(false)
 
   const displayDescription = transaction.description.replace(/\s*\*\s*$/, '')
 
@@ -56,11 +61,23 @@ export function TransactionItem({
 
   const handleTouchStart = (e: React.TouchEvent) => {
     startX.current = e.touches[0].clientX
+    if (onLongPress) {
+      longPressedRef.current = false
+      if (longPressTimeout.current) window.clearTimeout(longPressTimeout.current)
+      longPressTimeout.current = window.setTimeout(() => {
+        longPressedRef.current = true
+        onLongPress()
+      }, 500)
+    }
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
     const x = e.touches[0].clientX
     const diff = startX.current - x
+    if (Math.abs(diff) > 10 && longPressTimeout.current) {
+      window.clearTimeout(longPressTimeout.current)
+      longPressTimeout.current = null
+    }
     if (diff > 0) {
       setDragX(Math.min(diff, 80))
     } else {
@@ -69,6 +86,10 @@ export function TransactionItem({
   }
 
   const handleTouchEnd = () => {
+    if (longPressTimeout.current) {
+      window.clearTimeout(longPressTimeout.current)
+      longPressTimeout.current = null
+    }
     if (dragX > SWIPE_THRESHOLD) {
       setDragX(80)
     } else {
@@ -106,7 +127,36 @@ export function TransactionItem({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onClick={onEdit}
+        onClick={(e) => {
+          if (longPressedRef.current) {
+            // Já acionou long press: não editar.
+            longPressedRef.current = false
+            return
+          }
+          onEdit()
+        }}
+        onMouseDown={() => {
+          if (onLongPress) {
+            longPressedRef.current = false
+            if (longPressTimeout.current) window.clearTimeout(longPressTimeout.current)
+            longPressTimeout.current = window.setTimeout(() => {
+              longPressedRef.current = true
+              onLongPress()
+            }, 600)
+          }
+        }}
+        onMouseUp={() => {
+          if (longPressTimeout.current) {
+            window.clearTimeout(longPressTimeout.current)
+            longPressTimeout.current = null
+          }
+        }}
+        onMouseLeave={() => {
+          if (longPressTimeout.current) {
+            window.clearTimeout(longPressTimeout.current)
+            longPressTimeout.current = null
+          }
+        }}
       >
         {selectionMode && onToggleSelect && (
           <button
