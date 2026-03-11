@@ -312,7 +312,7 @@ export function TransactionsPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-36 sm:pb-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <TransactionsMonthNavigator
           monthKey={transactionMonth}
@@ -414,41 +414,40 @@ export function TransactionsPage() {
         }}
       />
 
-      {/* Resultados por conta (ao final, uma linha por conta, sem scroll horizontal) */}
+      {/* Resultados por conta: nome em uma linha, dados (consolidado/previsto) na linha de baixo, sem quebra no meio */}
       {accounts.length > 0 && (
-        <div className="rounded-xl border border-surface-200 bg-surface-50 p-3 space-y-2">
+        <div className="rounded-xl border border-surface-200 bg-surface-50 p-3 space-y-3">
           <p className="text-sm font-semibold text-surface-700">Resultados no período</p>
           {accounts.map((acc) => {
             const net = netByAccount.get(acc.id) ?? { consolidated: 0, projected: 0 }
             return (
-              <div
-                key={acc.id}
-                className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm min-w-0"
-              >
-                <span className="font-medium text-surface-700 truncate shrink-0 max-w-[140px]" title={acc.name}>
+              <div key={acc.id} className="space-y-0.5">
+                <div className="font-medium text-surface-700" title={acc.name}>
                   {acc.name}
-                </span>
-                <span className="text-surface-500 shrink-0">consolidado</span>
-                <span
-                  className={cn(
-                    'font-semibold tabular-nums shrink-0',
-                    net.consolidated >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
-                  )}
-                >
-                  {net.consolidated >= 0 ? '+' : ''}
-                  {formatCurrencyFromCents(net.consolidated)}
-                </span>
-                <span className="text-surface-400 shrink-0">/</span>
-                <span className="text-surface-500 shrink-0">previsto</span>
-                <span
-                  className={cn(
-                    'font-semibold tabular-nums shrink-0',
-                    net.projected >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
-                  )}
-                >
-                  {net.projected >= 0 ? '+' : ''}
-                  {formatCurrencyFromCents(net.projected)}
-                </span>
+                </div>
+                <div className="flex items-center gap-x-2 text-sm whitespace-nowrap min-w-0 overflow-x-auto">
+                  <span className="text-surface-500">consolidado</span>
+                  <span
+                    className={cn(
+                      'font-semibold tabular-nums',
+                      net.consolidated >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
+                    )}
+                  >
+                    {net.consolidated >= 0 ? '+' : ''}
+                    {formatCurrencyFromCents(net.consolidated)}
+                  </span>
+                  <span className="text-surface-400">/</span>
+                  <span className="text-surface-500">previsto</span>
+                  <span
+                    className={cn(
+                      'font-semibold tabular-nums',
+                      net.projected >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
+                    )}
+                  >
+                    {net.projected >= 0 ? '+' : ''}
+                    {formatCurrencyFromCents(net.projected)}
+                  </span>
+                </div>
               </div>
             )
           })}
