@@ -176,7 +176,11 @@ export function TransactionsPage() {
   const handleTogglePaid = async (t: Transaction) => {
     try {
       await updateTransaction(t.id, { is_paid: !t.is_paid })
-      toast.success(t.is_paid ? 'Marcada como a pagar' : 'Marcada como paga')
+      if (t.type === 'income') {
+        toast.success(t.is_paid ? 'Marcada como a receber' : 'Marcada como recebida')
+      } else {
+        toast.success(t.is_paid ? 'Marcada como a pagar' : 'Marcada como paga')
+      }
     } catch {
       toast.error('Erro ao atualizar')
     }
@@ -235,7 +239,9 @@ export function TransactionsPage() {
       for (const id of ids) {
         await updateTransaction(id, { is_paid: true })
       }
-      toast.success(ids.length === 1 ? 'Marcada como paga' : `${ids.length} transações marcadas como pagas`)
+      toast.success(
+        ids.length === 1 ? 'Marcada como paga/recebida' : `${ids.length} transações marcadas como pagas/recebidas`
+      )
       setSelectedIds(new Set())
       setSelectionMode(false)
     } catch {

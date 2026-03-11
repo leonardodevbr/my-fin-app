@@ -59,6 +59,15 @@ export function TransactionItem({
         ? 'text-[var(--color-expense)]'
         : 'text-[var(--color-transfer)]'
 
+  const statusLabel =
+    transaction.type === 'income'
+      ? transaction.is_paid
+        ? 'Recebido'
+        : 'A receber'
+      : transaction.is_paid
+        ? 'Pago'
+        : 'A pagar'
+
   const handleTouchStart = (e: React.TouchEvent) => {
     startX.current = e.touches[0].clientX
     if (onLongPress) {
@@ -230,9 +239,17 @@ export function TransactionItem({
                   ? 'ml-auto bg-primary-100 text-primary-700 hover:bg-primary-200'
                   : 'ml-auto bg-surface-100 text-surface-600 hover:bg-surface-200'
               )}
-              aria-label={transaction.is_paid ? 'Marcar como não pago' : 'Marcar como pago'}
+              aria-label={
+                transaction.is_paid
+                  ? transaction.type === 'income'
+                    ? 'Marcar como não recebido'
+                    : 'Marcar como não pago'
+                  : transaction.type === 'income'
+                    ? 'Marcar como recebido'
+                    : 'Marcar como pago'
+              }
             >
-              {transaction.is_paid ? 'Pago' : 'A pagar'}
+              {statusLabel}
             </button>
             <p className={cn('shrink-0 font-semibold tabular-nums', amountColor)}>
               {transaction.type === 'expense' ? '-' : '+'}
