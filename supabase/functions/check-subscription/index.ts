@@ -30,6 +30,38 @@ Deno.serve(async (req) => {
     })
   }
 
+  // Pro grátis para dono/lista de e-mails ou IDs (secret PRO_FREE_EMAILS ou PRO_FREE_USER_IDS, separados por vírgula)
+  const freeEmails = (Deno.env.get('PRO_FREE_EMAILS') ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+  const freeUserIds = (Deno.env.get('PRO_FREE_USER_IDS') ?? '')
+    .split(',')
+    .map((e) => e.trim())
+    .filter(Boolean)
+  const isFreePro =
+    (user.email && freeEmails.includes(user.email.toLowerCase())) ||
+    freeUserIds.includes(user.id)
+
+  if (isFreePro) {
+    const farFuture = new Date()
+    farFuture.setFullYear(farFuture.getFullYear() + 10)
+    const endIso = farFuture.toISOString()
+    return new Response(
+      JSON.stringify({
+        plan: 'pro',
+        status: 'active',
+        hasAccess: true,
+        isTrialActive: false,
+        isProActive: true,
+        trialEndsAt: null,
+        currentPeriodEnd: endIso,
+        daysRemaining: 3650,
+      }),
+      { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } }
+    )
+  }
+
   const { data: sub } = await supabase
     .from('user_subscriptions')
     .select('*')

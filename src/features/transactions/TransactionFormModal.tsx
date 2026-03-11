@@ -25,7 +25,7 @@ import {
   type PaymentMode as ServicePaymentMode,
   type EditGroupScope,
 } from './transactionGroupService'
-import { updateTransaction } from '../../hooks/useTransactions'
+import { addTransaction, updateTransaction } from '../../hooks/useTransactions'
 import toast from 'react-hot-toast'
 
 const PAYMENT_MODES: { value: ServicePaymentMode; label: string; desc: string; icon: typeof Zap }[] = [
@@ -289,6 +289,29 @@ export function TransactionFormModal({
           category_id: values.category_id || null,
           is_paid: values.is_paid,
           paid_at: values.is_paid ? now : null,
+          notes: values.notes.trim() || null,
+          tags: values.tags,
+        })
+        toast.success('Transação salva')
+        onSaved()
+        onClose()
+        return
+      }
+
+      // Novo lançamento ÚNICO: cria só uma transação isolada (sem grupo), não um transaction_group.
+      if (!transaction && values.payment_mode === 'single') {
+        const now = new Date().toISOString()
+        await addTransaction({
+          group_id: null,
+          account_id: values.account_id,
+          category_id: values.category_id || null,
+          type: values.type,
+          amount: values.amount_cents,
+          description: values.description.trim(),
+          date: values.date,
+          paid_at: values.is_paid ? now : null,
+          is_paid: values.is_paid,
+          installment_number: null,
           notes: values.notes.trim() || null,
           tags: values.tags,
         })
