@@ -226,3 +226,22 @@ export function useRecentDescriptions(limit = 20): string[] {
   )
   return list ?? []
 }
+
+/** Todas as tags já usadas em transações (para sugestões no formulário). */
+export function useExistingTags(): string[] {
+  const list = useLiveQuery(
+    async () => {
+      const all = await db.transactions.toArray()
+      const set = new Set<string>()
+      for (const t of all) {
+        for (const tag of t.tags ?? []) {
+          const s = tag.trim()
+          if (s) set.add(s)
+        }
+      }
+      return Array.from(set).sort((a, b) => a.localeCompare(b))
+    },
+    []
+  )
+  return list ?? []
+}

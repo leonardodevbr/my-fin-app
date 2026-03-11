@@ -17,7 +17,7 @@ import { cn, formatCurrencyFromCents, toISODate } from '../../lib/utils'
 import { useAuth } from '../../hooks/useAuth'
 import { useAccounts } from '../../hooks/useAccounts'
 import { useCategories } from '../../hooks/useCategories'
-import { useRecentDescriptions, getTransactionsByGroupId } from '../../hooks/useTransactions'
+import { useRecentDescriptions, getTransactionsByGroupId, useExistingTags } from '../../hooks/useTransactions'
 import {
   createTransactionGroup,
   updateTransactionInGroup,
@@ -173,6 +173,7 @@ export function TransactionFormModal({
   const type = watch('type')
   const amount_cents = watch('amount_cents')
   const tags = watch('tags')
+  const existingTags = useExistingTags()
   const description = watch('description')
   const notes = watch('notes')
 
@@ -761,6 +762,31 @@ export function TransactionFormModal({
           {/* Tags */}
           <div>
             <label className="block text-sm font-medium text-surface-700 mb-1">Tags (Enter para adicionar)</label>
+            {existingTags.length > 0 && (() => {
+              const toShow = existingTags.filter((tag) => !(tags ?? []).some((t) => t.toLowerCase() === tag.toLowerCase()))
+              return toShow.length > 0 ? (
+                <>
+                  <p className="text-xs text-surface-500 mb-1.5">Tags existentes (clique para adicionar):</p>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {toShow.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          const current = tags ?? []
+                          if (!current.some((t) => t.toLowerCase() === tag.toLowerCase())) {
+                            setValue('tags', [...current, tag])
+                          }
+                        }}
+                        className="rounded-full border border-surface-300 bg-surface-100 px-2.5 py-1 text-xs font-medium text-surface-700 hover:bg-surface-200"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null
+            })()}
             <input
               type="text"
               value={tagInput}

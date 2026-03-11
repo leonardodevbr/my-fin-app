@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Plus, CheckSquare, SlidersHorizontal } from 'lucide-react'
+import { Plus, CheckSquare, SlidersHorizontal, X } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import type { Transaction } from '../../db'
 import { useTransactions } from '../../hooks/useTransactions'
 import { updateTransaction, deleteTransaction, deleteTransactionGroup, getTransactionsByGroupId } from '../../hooks/useTransactions'
+import { useAccounts } from '../../hooks/useAccounts'
 import { useDebounce } from '../../hooks/useDebounce'
 import { monthRange, toMonthKey, formatCurrencyFromCents } from '../../lib/utils'
 import { TransactionFilters, type TransactionFilter } from './TransactionFilters'
@@ -66,6 +67,7 @@ export function TransactionsPage() {
   const [filter, setFilter] = useState<TransactionFilter>('all')
   const [paidFilter, setPaidFilter] = useState<'all' | 'paid' | 'unpaid'>('all')
   const [tagFilter, setTagFilter] = useState<string[]>([])
+  const [accountFilterIds, setAccountFilterIds] = useState<string[]>([])
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebounce(searchInput, 300)
@@ -87,11 +89,8 @@ export function TransactionsPage() {
     filter === 'income' || filter === 'expense' || filter === 'transfer' ? filter : 'expense'
 
   const [from, to] = monthRange(transactionMonth)
-  const rawTransactions = useTransactions({
-    from,
-    to,
-    accountId: accountIdParam,
-  })
+  const rawTransactions = useTransactions({ from, to })
+  const accounts = useAccounts(false)
 
   const allTags = useMemo(() => {
     const set = new Set<string>()
@@ -107,11 +106,18 @@ export function TransactionsPage() {
     let count = 0
     if (paidFilter !== 'all') count += 1
     count += tagFilter.length
+    if (accountFilterIds.length > 0) count += 1
     return count
-  }, [paidFilter, tagFilter])
+  }, [paidFilter, tagFilter, accountFilterIds.length])
 
   const transactions = useMemo(() => {
     let list = rawTransactions
+
+    if (accountFilterIds.length > 0) {
+      list = list.filter((t) => accountFilterIds.includes(t.account_id))
+    } else if (accountIdParam) {
+      list = list.filter((t) => t.account_id === accountIdParam)
+    }
 
     if (filter !== 'all') {
       list = list.filter((t) => t.type === filter)
@@ -124,16 +130,25 @@ export function TransactionsPage() {
     }
 
     if (tagFilter.length > 0) {
-      list = list.filter((t) => (t.tags ?? []).some((tag) => tagFilter.includes(tag)))
+      list = list.filter((t) =>
+        (t.tags ?? []).some((tag) => tag.trim() !== '' && tagFilter.some((ft) => ft.toLowerCase() === tag.toLowerCase()))
+      )
     }
 
     if (debouncedSearch.trim()) {
-      const q = debouncedSearch.toLowerCase()
-      list = list.filter((t) => t.description.toLowerCase().includes(q))
+      const q = debouncedSearch.toLowerCase().trim()
+      list = list.filter((t) => {
+        const descMatch = t.description.toLowerCase().includes(q)
+        const amountCents = String(t.amount)
+        const amountReais = (t.amount / 100).toFixed(2).replace('.', ',')
+        const amountMatch = amountCents.includes(q) || amountReais.includes(q)
+        const tagMatch = (t.tags ?? []).some((tag) => tag.toLowerCase().includes(q))
+        return descMatch || amountMatch || tagMatch
+      })
     }
 
     return list
-  }, [rawTransactions, filter, debouncedSearch])
+  }, [rawTransactions, accountIdParam, accountFilterIds, filter, paidFilter, tagFilter, debouncedSearch])
 
   const periodTotals = useMemo(() => {
     let income = 0
@@ -147,16 +162,44 @@ export function TransactionsPage() {
     return { income, expense, transfer }
   }, [transactions])
 
-  const periodNet = useMemo(() => {
-    let projected = 0
-    let consolidated = 0
-    for (const t of transactions) {
-      const delta = t.type === 'income' ? t.amount : t.type === 'expense' ? -t.amount : 0
-      projected += delta
-      if (t.is_paid) consolidated += delta
+  /** Por conta: consolidado e previsto para cada conta (todas as contas, sem filtro de conta). */
+  const transactionsForSummary = useMemo(() => {
+    let list = rawTransactions
+    if (filter !== 'all') list = list.filter((t) => t.type === filter)
+    if (paidFilter === 'paid') list = list.filter((t) => t.is_paid)
+    else if (paidFilter === 'unpaid') list = list.filter((t) => !t.is_paid)
+    if (tagFilter.length > 0) {
+      list = list.filter((t) =>
+        (t.tags ?? []).some((tag) =>
+          tag.trim() !== '' && tagFilter.some((ft) => ft.toLowerCase() === tag.toLowerCase())
+        )
+      )
     }
-    return { projected, consolidated }
-  }, [transactions])
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase().trim()
+      list = list.filter((t) => {
+        const descMatch = t.description.toLowerCase().includes(q)
+        const amountCents = String(t.amount)
+        const amountReais = (t.amount / 100).toFixed(2).replace('.', ',')
+        const amountMatch = amountCents.includes(q) || amountReais.includes(q)
+        const tagMatch = (t.tags ?? []).some((tag) => tag.toLowerCase().includes(q))
+        return descMatch || amountMatch || tagMatch
+      })
+    }
+    return list
+  }, [rawTransactions, filter, paidFilter, tagFilter, debouncedSearch])
+
+  const netByAccount = useMemo(() => {
+    const byAccount = new Map<string, { consolidated: number; projected: number }>()
+    for (const t of transactionsForSummary) {
+      const cur = byAccount.get(t.account_id) ?? { consolidated: 0, projected: 0 }
+      const delta = t.type === 'income' ? t.amount : t.type === 'expense' ? -t.amount : 0
+      cur.projected += delta
+      if (t.is_paid) cur.consolidated += delta
+      byAccount.set(t.account_id, cur)
+    }
+    return byAccount
+  }, [transactionsForSummary])
 
   const handleEdit = (t: Transaction) => {
     setEditingTransaction(t)
@@ -327,13 +370,13 @@ export function TransactionsPage() {
 
       <input
         type="search"
-        placeholder="Buscar por descrição..."
+        placeholder="Buscar por descrição, valor ou tag..."
         value={searchInput}
         onChange={(e) => setSearchInput(e.target.value)}
         className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-surface-900 placeholder:text-surface-400"
       />
 
-      <div className="flex flex-nowrap items-center gap-x-2 overflow-x-auto rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm min-w-0">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm">
         <span className="font-medium text-surface-600 shrink-0">Receitas</span>
         <span className="font-semibold tabular-nums text-[var(--color-income)] shrink-0">
           {formatCurrencyFromCents(periodTotals.income)}
@@ -354,30 +397,6 @@ export function TransactionsPage() {
         )}
       </div>
 
-      <div className="flex flex-nowrap items-center gap-x-2 overflow-x-auto rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-xs min-w-0">
-        <span className="font-medium text-surface-600 shrink-0">Resultado consolidado</span>
-        <span
-          className={cn(
-            'font-semibold tabular-nums shrink-0',
-            periodNet.consolidated >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
-          )}
-        >
-          {periodNet.consolidated >= 0 ? '+' : ''}
-          {formatCurrencyFromCents(periodNet.consolidated)}
-        </span>
-        <span className="text-surface-400 shrink-0">/</span>
-        <span className="font-medium text-surface-600 shrink-0">Resultado previsto</span>
-        <span
-          className={cn(
-            'font-semibold tabular-nums shrink-0',
-            periodNet.projected >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
-          )}
-        >
-          {periodNet.projected >= 0 ? '+' : ''}
-          {formatCurrencyFromCents(periodNet.projected)}
-        </span>
-      </div>
-
       <TransactionList
         transactions={transactions}
         onEdit={handleEdit}
@@ -394,6 +413,47 @@ export function TransactionsPage() {
           setSelectedIds(new Set([id]))
         }}
       />
+
+      {/* Resultados por conta (ao final, uma linha por conta, sem scroll horizontal) */}
+      {accounts.length > 0 && (
+        <div className="rounded-xl border border-surface-200 bg-surface-50 p-3 space-y-2">
+          <p className="text-sm font-semibold text-surface-700">Resultados no período</p>
+          {accounts.map((acc) => {
+            const net = netByAccount.get(acc.id) ?? { consolidated: 0, projected: 0 }
+            return (
+              <div
+                key={acc.id}
+                className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm min-w-0"
+              >
+                <span className="font-medium text-surface-700 truncate shrink-0 max-w-[140px]" title={acc.name}>
+                  {acc.name}
+                </span>
+                <span className="text-surface-500 shrink-0">consolidado</span>
+                <span
+                  className={cn(
+                    'font-semibold tabular-nums shrink-0',
+                    net.consolidated >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
+                  )}
+                >
+                  {net.consolidated >= 0 ? '+' : ''}
+                  {formatCurrencyFromCents(net.consolidated)}
+                </span>
+                <span className="text-surface-400 shrink-0">/</span>
+                <span className="text-surface-500 shrink-0">previsto</span>
+                <span
+                  className={cn(
+                    'font-semibold tabular-nums shrink-0',
+                    net.projected >= 0 ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'
+                  )}
+                >
+                  {net.projected >= 0 ? '+' : ''}
+                  {formatCurrencyFromCents(net.projected)}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       <TransactionFormModal
         open={formOpen}
@@ -476,10 +536,70 @@ export function TransactionsPage() {
       )}
 
       {filtersOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-4 shadow-xl">
-            <h3 className="text-lg font-semibold text-surface-900">Filtros</h3>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setFiltersOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-sm rounded-xl bg-white p-4 shadow-xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="filtros-title"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 id="filtros-title" className="text-lg font-semibold text-surface-900">Filtros</h3>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(false)}
+                className="rounded-lg p-1.5 text-surface-500 hover:bg-surface-100"
+                aria-label="Fechar"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
             <div className="mt-4 space-y-4">
+              <div>
+                <p className="text-xs font-medium text-surface-600 mb-1">Conta</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAccountFilterIds([])}
+                    className={cn(
+                      'rounded-full px-3 py-1.5 text-xs font-medium border',
+                      accountFilterIds.length === 0
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        : 'border-surface-300 bg-surface-100 text-surface-700'
+                    )}
+                  >
+                    Todas
+                  </button>
+                  {accounts.map((acc) => {
+                    const active = accountFilterIds.includes(acc.id)
+                    return (
+                      <button
+                        key={acc.id}
+                        type="button"
+                        onClick={() =>
+                          setAccountFilterIds((prev) =>
+                            prev.includes(acc.id) ? prev.filter((id) => id !== acc.id) : [...prev, acc.id]
+                          )
+                        }
+                        className={cn(
+                          'rounded-full px-3 py-1.5 text-xs font-medium border truncate max-w-[160px]',
+                          active
+                            ? 'border-primary-500 bg-primary-50 text-primary-700'
+                            : 'border-surface-300 bg-surface-100 text-surface-700'
+                        )}
+                        title={acc.name}
+                      >
+                        {acc.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
               <div>
                 <p className="text-xs font-medium text-surface-600 mb-1">Pagamento</p>
                 <div className="flex gap-2">
@@ -510,14 +630,16 @@ export function TransactionsPage() {
                   <p className="text-xs font-medium text-surface-600 mb-1">Tags</p>
                   <div className="flex flex-wrap gap-2">
                     {allTags.map((tag) => {
-                      const active = tagFilter.includes(tag)
+                      const active = tagFilter.some((ft) => ft.toLowerCase() === tag.toLowerCase())
                       return (
                         <button
                           key={tag}
                           type="button"
                           onClick={() =>
                             setTagFilter((prev) =>
-                              prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                              prev.some((ft) => ft.toLowerCase() === tag.toLowerCase())
+                                ? prev.filter((ft) => ft.toLowerCase() !== tag.toLowerCase())
+                                : [...prev, tag]
                             )
                           }
                           className={cn(
@@ -542,6 +664,8 @@ export function TransactionsPage() {
                 onClick={() => {
                   setPaidFilter('all')
                   setTagFilter([])
+                  setAccountFilterIds([])
+                  setFiltersOpen(false)
                 }}
                 className="w-full"
               >
